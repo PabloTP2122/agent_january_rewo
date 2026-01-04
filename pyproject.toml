@@ -1,0 +1,59 @@
+[project]
+name = "agent-january-rewoo"
+version = "0.1.0"
+description = "Agente ReWOO de alto rendimiento con LangGraph"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "chromadb>=1.4.0",
+    "fastapi[standard]>=0.128.0",
+    "helicone>=1.0.14",
+    "jinja2>=3.1.6",
+    "langchain>=1.2.0",
+    "langchain-google-genai>=4.1.2",
+    "langgraph>=1.0.5",
+    "langgraph-checkpoint-postgres>=3.0.2",
+    "psycopg[binary]>=3.3.2",
+    "ragas>=0.0.19",
+]
+
+[dependency-groups]
+dev = [
+    "langgraph-cli[inmem]>=0.4.11",
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "ruff>=0.14.10",
+]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # flake8-bandit
+    "S",
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true

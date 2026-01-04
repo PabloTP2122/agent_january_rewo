@@ -1,0 +1,18 @@
+repos:
+  - repo: ...
+    rev: ...
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+
+  - repo: ...  # Integración de Ruff (Astral)
+    rev: ...
+    hooks:
+      - id: ruff
+      - id: ruff-format
+
+  - repo: ...  # mirrors-mypy
+    rev: "1.8.0"
+    hooks:
+      - id: mypy

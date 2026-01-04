@@ -1,0 +1,10 @@
+{
+  "python_version": "3.13",
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "rewoo": "./src/rewoo_agent/graph.py"
+  },
+  "env": ".env"
+}
