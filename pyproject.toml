@@ -25,6 +25,7 @@ dev = [
     "langgraph-cli[inmem]>=0.4.11",
     "mypy>=1.19.1",
     "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
     "ruff>=0.14.10",
 ]
 
@@ -60,3 +61,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+[tool.pytest.ini_options]
+testPaths = ["tests"]
+python_files = ["test_*.py"]
