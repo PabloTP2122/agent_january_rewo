@@ -11,8 +11,8 @@ export default function Home() {
             Connect your agent to the right panel to start chatting.
         </p>
       </div>
-      
-      <CopilotSidebar 
+
+      <CopilotSidebar
         defaultOpen={true}
         instructions="You are a helpful assistant."
         labels={{
