@@ -1,27 +1,31 @@
-# Agent January ReWOO
+<div align="right">
+  <a href="README.md">English</a> | <a href="README-es.md">Español</a>
+</div>
 
-Sistema de agentes de IA para planificación nutricional utilizando la arquitectura **ReWOO** (Reasoning WithOut Observation) con LangGraph.
+# Agent January ReWOO (English)
 
-## Tabla de Contenidos
+AI agent system for nutritional planning using the **ReWOO** (Reasoning WithOut Observation) architecture with LangGraph.
 
-- [Descripcion](#descripcion)
-- [Arquitectura del Sistema](#arquitectura-del-sistema)
-- [Stack Tecnologico](#stack-tecnologico)
-- [Inicio Rapido](#inicio-rapido)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Observabilidad con Helicone](#observabilidad-con-helicone)
-- [Evaluacion con RAGAS](#evaluacion-con-ragas)
+## Table of Contents
 
-## Descripcion
+- [Description](#description)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Observability with Helicone](#observability-with-helicone)
+- [Evaluation with RAGAS](#evaluation-with-ragas)
 
-Este proyecto implementa un agente de IA especializado en nutricion que utiliza la arquitectura ReWOO para generar planes alimenticios personalizados. El sistema:
+## Description
 
-- **Planifica primero**: Genera un plan de alto nivel antes de ejecutar herramientas
-- **Usa sustitucion de variables**: Permite dependencias entre pasos (#E1, #E2, etc.)
-- **Valida matematicamente**: Verifica calculos caloricos y de macronutrientes
-- **Produce salida estructurada**: Genera planes de dieta con formato Pydantic validado
+This project implements an AI agent specialized in nutrition that uses the ReWOO architecture to generate personalized meal plans. The system:
 
-## Arquitectura del Sistema
+- **Plans first**: Generates a high-level plan before executing tools
+- **Uses variable substitution**: Allows dependencies between steps (#E1, #E2, etc.)
+- **Validates mathematically**: Verifies caloric and macronutrient calculations
+- **Produces structured output**: Generates diet plans with validated Pydantic format
+
+## System Architecture
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -41,159 +45,159 @@ Este proyecto implementa un agente de IA especializado en nutricion que utiliza 
               ▼                                                 ▼
 ┌─────────────────────────┐                   ┌─────────────────────────────────┐
 │    Simple Agent         │                   │       ReWOO Agent               │
-│  (Prueba rapida UI)     │                   │   (Agente Principal)            │
+│  (Quick UI test)        │                   │   (Main Agent)                  │
 │                         │                   │                                 │
 │  START -> agent -> END  │                   │   ┌─────────┐                   │
-│                         │                   │   │ Planner │ Genera plan con   │
-│  - MessagesState        │                   │   │         │ herramientas y    │
-│  - GPT-4o               │                   │   │         │ variables #E      │
+│                         │                   │   │ Planner │ Generates plan    │
+│  - MessagesState        │                   │   │         │ with tools and    │
+│  - GPT-4o               │                   │   │         │ #E variables      │
 └─────────────────────────┘                   │   └────┬────┘                   │
                                               │        │                        │
                                               │        ▼                        │
                                               │   ┌─────────┐                   │
-                                              │   │ Worker  │ Ejecuta tools     │
-                                              │   │         │ con sustitucion   │
+                                              │   │ Worker  │ Executes tools    │
+                                              │   │         │ with substitution │
                                               │   └────┬────┘                   │
                                               │        │                        │
                                               │        ▼                        │
                                               │   ┌─────────┐                   │
-                                              │   │ Solver  │ Genera respuesta  │
-                                              │   │         │ final DietPlan    │
+                                              │   │ Solver  │ Generates final   │
+                                              │   │         │ DietPlan response │
                                               │   └─────────┘                   │
                                               └─────────────────────────────────┘
                                                           │
                                                           ▼
                                               ┌─────────────────────────┐
                                               │   PostgreSQL + Checkpointer   │
-                                              │   (Persistencia de estado)    │
+                                              │   (State persistence)         │
                                               └───────────────────────────────┘
 ```
 
-### Flujo ReWOO
+### ReWOO Flow
 
-1. **Planner**: Recibe la tarea del usuario y genera un plan estructurado con herramientas y variables de sustitucion
-2. **Worker**: Ejecuta cada herramienta del plan, resolviendo las variables (#E1, #E2) con resultados anteriores
-3. **Solver**: Consolida las observaciones y genera la respuesta final estructurada (DietPlan)
+1. **Planner**: Receives the user's task and generates a structured plan with tools and substitution variables
+2. **Worker**: Executes each tool in the plan, resolving variables (#E1, #E2) with previous results
+3. **Solver**: Consolidates observations and generates the final structured response (DietPlan)
 
-### Herramientas Disponibles
+### Available Tools
 
-| Herramienta | Descripcion |
-|-------------|-------------|
-| `generate_nutritional_plan` | Calcula TDEE y macros segun perfil del usuario |
-| `food_facts_search` | Busca informacion nutricional via RAG |
-| `sum_ingredients_kcal` | Valida sumas caloricas de ingredientes |
-| `sum_total_kcal` | Suma calorias de todas las comidas |
-| `get_meal_distribution` | Distribuye calorias por comida |
-| `consolidate_shopping_list` | Genera lista de compras consolidada |
-| `fetch_recipe_nutrition_facts` | Consulta base vectorial para nutricion |
+| Tool | Description |
+|------|-------------|
+| `generate_nutritional_plan` | Calculates TDEE and macros based on user profile |
+| `food_facts_search` | Searches nutritional information via RAG |
+| `sum_ingredients_kcal` | Validates caloric sums of ingredients |
+| `sum_total_kcal` | Sums calories from all meals |
+| `get_meal_distribution` | Distributes calories per meal |
+| `consolidate_shopping_list` | Generates consolidated shopping list |
+| `fetch_recipe_nutrition_facts` | Queries vector database for nutrition |
 
-## Stack Tecnologico
+## Tech Stack
 
 ### Backend (Python 3.12)
-- **LangGraph** - Orquestacion de agentes
-- **LangChain** - Abstraccion de LLMs y herramientas
-- **FastAPI** - API REST con soporte asincrono
-- **CopilotKit** - Integracion frontend-backend
-- **PostgreSQL** - Persistencia con `langgraph-checkpoint-postgres`
-- **Pydantic v2** - Validacion estricta de esquemas
+- **LangGraph** - Agent orchestration
+- **LangChain** - LLM and tools abstraction
+- **FastAPI** - REST API with async support
+- **CopilotKit** - Frontend-backend integration
+- **PostgreSQL** - Persistence with `langgraph-checkpoint-postgres`
+- **Pydantic v2** - Strict schema validation
 
 ### Frontend (ui/)
 - **Next.js 16** - App Router
-- **React 19** - UI moderna
-- **CopilotKit React** - Componentes de chat (Sidebar, Core)
-- **Tailwind CSS 4** - Estilos
+- **React 19** - Modern UI
+- **CopilotKit React** - Chat components (Sidebar, Core)
+- **Tailwind CSS 4** - Styling
 
-### Observabilidad y Evaluacion
-- **Helicone** - Proxy para monitoreo de LLM calls
-- **RAGAS** - Framework de evaluacion para sistemas RAG
-- **LangSmith** - Tracing y debugging
+### Observability and Evaluation
+- **Helicone** - Proxy for LLM call monitoring
+- **RAGAS** - Evaluation framework for RAG systems
+- **LangSmith** - Tracing and debugging
 
-## Inicio Rapido
+## Quick Start
 
-### 1. Requisitos Previos
+### 1. Prerequisites
 - Python 3.12
 - Node.js 20+
-- Docker y Docker Compose
-- [uv](https://github.com/astral-sh/uv) (gestor de paquetes Python)
+- Docker and Docker Compose
+- [uv](https://github.com/astral-sh/uv) (Python package manager)
 
-### 2. Configurar Variables de Entorno
+### 2. Configure Environment Variables
 ```bash
 cp .env_example .env
-# Editar .env con tus API keys:
+# Edit .env with your API keys:
 # - OPENAI_API_KEY
 # - HELICONE_API_KEY
 # - VECTOR_STORE_ID
-# - LANGSMITH_API_KEY (opcional)
-# - Variables de PostgreSQL
+# - LANGSMITH_API_KEY (optional)
+# - PostgreSQL variables
 ```
 
-### 3. Instalar Dependencias
+### 3. Install Dependencies
 ```bash
 # Backend
 make install
-# o: uv sync
+# or: uv sync
 
 # Frontend
 cd ui && npm install
 ```
 
-### 4. Levantar Servicios
+### 4. Start Services
 ```bash
-# Iniciar PostgreSQL
+# Start PostgreSQL
 make docker-up
 
-# Iniciar Backend (desarrollo)
+# Start Backend (development)
 make server-run
-# o: uv run fastapi dev src/api/main.py
+# or: uv run fastapi dev src/api/main.py
 
-# Iniciar Frontend (en otra terminal)
+# Start Frontend (in another terminal)
 cd ui && npm run dev
 ```
 
-### 5. Acceder
+### 5. Access
 - **Frontend**: http://localhost:3000
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 
-### Comandos Makefile
+### Makefile Commands
 
-| Comando | Descripcion |
+| Command | Description |
 |---------|-------------|
-| `make install` | Sincroniza dependencias con uv |
-| `make docker-up` | Levanta PostgreSQL en Docker |
-| `make docker-stop` | Detiene contenedores |
-| `make server-run` | Inicia FastAPI en modo desarrollo |
-| `make server-run-d` | Docker + FastAPI en un comando |
-| `make lang-dev` | Inicia LangGraph dev server |
+| `make install` | Sync dependencies with uv |
+| `make docker-up` | Start PostgreSQL in Docker |
+| `make docker-stop` | Stop containers |
+| `make server-run` | Start FastAPI in development mode |
+| `make server-run-d` | Docker + FastAPI in one command |
+| `make lang-dev` | Start LangGraph dev server |
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 agent_january_rewoo/
 ├── src/
-│   ├── agent/                 # Agente simple (prueba UI)
-│   │   ├── agent.py           # StateGraph compilado
-│   │   ├── node.py            # Nodo con GPT-4o
+│   ├── agent/                 # Simple agent (UI test)
+│   │   ├── agent.py           # Compiled StateGraph
+│   │   ├── node.py            # Node with GPT-4o
 │   │   ├── state.py           # MessagesState
-│   │   └── llm.py             # Config Helicone
+│   │   └── llm.py             # Helicone config
 │   │
-│   ├── rewoo_agent/           # Agente ReWOO (principal)
-│   │   ├── graph.py           # StateGraph ReWOO
+│   ├── rewoo_agent/           # ReWOO Agent (main)
+│   │   ├── graph.py           # ReWOO StateGraph
 │   │   ├── state.py           # ReWOOState
-│   │   ├── llm.py             # LLM con Helicone proxy
-│   │   ├── structured_output_meal.py  # Modelos Pydantic
+│   │   ├── llm.py             # LLM with Helicone proxy
+│   │   ├── structured_output_meal.py  # Pydantic models
 │   │   ├── nodes/
-│   │   │   ├── planner/       # Generacion de planes
-│   │   │   │   ├── node.py    # Logica del Planner
-│   │   │   │   └── prompt.py  # Prompt de planificacion
-│   │   │   ├── worker/        # Ejecucion de herramientas
-│   │   │   │   ├── tools.py   # 6 herramientas nutricionales
-│   │   │   │   ├── node.py    # Logica del Worker
-│   │   │   │   └── prompt.py  # Prompt del Worker
-│   │   │   ├── solver/        # Generacion de respuesta final
-│   │   │   ├── reviewer/      # Revision de planes (planeado)
-│   │   │   └── documenter/    # Documentacion (planeado)
-│   │   └── routes/            # Rutas adicionales
+│   │   │   ├── planner/       # Plan generation
+│   │   │   │   ├── node.py    # Planner logic
+│   │   │   │   └── prompt.py  # Planning prompt
+│   │   │   ├── worker/        # Tool execution
+│   │   │   │   ├── tools.py   # 6 nutritional tools
+│   │   │   │   ├── node.py    # Worker logic
+│   │   │   │   └── prompt.py  # Worker prompt
+│   │   │   ├── solver/        # Final response generation
+│   │   │   ├── reviewer/      # Plan review (planned)
+│   │   │   └── documenter/    # Documentation (planned)
+│   │   └── routes/            # Additional routes
 │   │
 │   ├── api/
 │   │   └── main.py            # FastAPI + CopilotKit endpoints
@@ -202,31 +206,31 @@ agent_january_rewoo/
 │   │   ├── config.py          # Pydantic Settings
 │   │   └── session.py         # PostgresSaver + Lifespan
 │   │
-│   └── models/                # Modelos compartidos
+│   └── models/                # Shared models
 │
-├── ui/                        # Frontend Next.js
+├── ui/                        # Next.js Frontend
 │   └── src/app/
 │       ├── layout.tsx         # CopilotKit Provider
 │       └── page.tsx           # CopilotSidebar
 │
 ├── tests/
-│   ├── tools/                 # Tests de herramientas
-│   └── evaluation/            # Evaluaciones RAGAS
+│   ├── tools/                 # Tool tests
+│   └── evaluation/            # RAGAS evaluations
 │
 ├── docker-compose.yml         # PostgreSQL service
-├── langgraph.json             # Config LangGraph CLI
-├── pyproject.toml             # Dependencias Python
-└── Makefile                   # Comandos de desarrollo
+├── langgraph.json             # LangGraph CLI config
+├── pyproject.toml             # Python dependencies
+└── Makefile                   # Development commands
 ```
 
-## Observabilidad con Helicone
+## Observability with Helicone
 
-El proyecto utiliza **Helicone** como proxy para todas las llamadas a OpenAI, proporcionando:
+The project uses **Helicone** as a proxy for all OpenAI calls, providing:
 
-- Logs detallados de cada request/response
-- Cache de respuestas para reducir costos
-- Metricas de latencia y uso de tokens
-- Dashboard de monitoreo en tiempo real
+- Detailed logs of each request/response
+- Response caching to reduce costs
+- Latency and token usage metrics
+- Real-time monitoring dashboard
 
 ```python
 # src/rewoo_agent/llm.py
@@ -235,7 +239,7 @@ from langchain_openai import ChatOpenAI
 def get_llm() -> ChatOpenAI:
     return ChatOpenAI(
         model="gpt-4o",
-        base_url="https://oai.h7i.ai/v1",  # Proxy Helicone
+        base_url="https://oai.h7i.ai/v1",  # Helicone proxy
         default_headers={
             "Helicone-Auth": f"Bearer {os.getenv('HELICONE_API_KEY')}",
             "Helicone-Cache-Enabled": "true",
@@ -243,45 +247,45 @@ def get_llm() -> ChatOpenAI:
     )
 ```
 
-Accede a tu dashboard en: https://www.helicone.ai/
+Access your dashboard at: https://www.helicone.ai/
 
-## Evaluacion con RAGAS
+## Evaluation with RAGAS
 
-**RAGAS** (Retrieval Augmented Generation Assessment) se utilizara para evaluar la calidad de las respuestas del agente:
+**RAGAS** (Retrieval Augmented Generation Assessment) will be used to evaluate the quality of the agent's responses:
 
-- **Faithfulness**: Precision de la informacion respecto a la fuente
-- **Answer Relevancy**: Relevancia de la respuesta a la pregunta
-- **Context Precision**: Precision del contexto recuperado
-- **Context Recall**: Exhaustividad del contexto
+- **Faithfulness**: Information accuracy relative to the source
+- **Answer Relevancy**: Response relevance to the question
+- **Context Precision**: Precision of retrieved context
+- **Context Recall**: Completeness of context
 
 ```python
-# Ejemplo de evaluacion (tests/evaluation/)
+# Evaluation example (tests/evaluation/)
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy
 
-# Evaluar respuestas del agente nutricional
+# Evaluate nutritional agent responses
 results = evaluate(
     dataset=test_dataset,
     metrics=[faithfulness, answer_relevancy],
 )
 ```
 
-## Estado del Desarrollo
+## Development Status
 
-- [x] Agente Simple funcional con UI
-- [x] Integracion CopilotKit
+- [x] Functional Simple Agent with UI
+- [x] CopilotKit Integration
 - [x] PostgreSQL Checkpointer
-- [x] Herramientas nutricionales (6 tools)
-- [x] Planner con prompts
-- [ ] Worker con sustitucion de variables
-- [ ] Solver con structured output
-- [ ] Evaluaciones RAGAS completas
-- [ ] Reviewer y Documenter nodes
+- [x] Nutritional tools (6 tools)
+- [x] Planner with prompts
+- [ ] Worker with variable substitution
+- [ ] Solver with structured output
+- [ ] Complete RAGAS evaluations
+- [ ] Reviewer and Documenter nodes
 
-## Licencia
+## License
 
-Este proyecto está licenciado bajo los términos de la licencia [Creative Commons Atribución-NoComercial 4.0 Internacional](LICENSE).
+This project is licensed under the terms of the [Creative Commons Attribution-NonCommercial 4.0 International](LICENSE) license.
 
-Puedes usar, compartir y adaptar el contenido para **fines no comerciales** siempre que se dé el crédito adecuado al autor original. Para más detalles, consulta el archivo [LICENSE](LICENSE) completo.
+You may use, share, and adapt the content for **non-commercial purposes** as long as appropriate credit is given to the original author. For more details, see the full [LICENSE](LICENSE) file.
 
-[Más información sobre la licencia CC BY-NC 4.0](https://creativecommons.org/)
+[More information about the CC BY-NC 4.0 license](https://creativecommons.org/)
