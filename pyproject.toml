@@ -2,6 +2,7 @@
 name = "agent-january-rewoo"
 version = "0.1.0"
 description = "Agente ReWOO de alto rendimiento con LangGraph"
+authors=["Pablo Torres <tpablo724@gmail.com>"]
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
