@@ -280,4 +280,8 @@ results = evaluate(
 
 ## Licencia
 
-MIT
+Este proyecto está licenciado bajo los términos de la licencia [Creative Commons Atribución-NoComercial 4.0 Internacional](LICENSE).
+
+Puedes usar, compartir y adaptar el contenido para **fines no comerciales** siempre que se dé el crédito adecuado al autor original. Para más detalles, consulta el archivo [LICENSE](LICENSE) completo.
+
+[Más información sobre la licencia CC BY-NC 4.0](https://creativecommons.org/)
