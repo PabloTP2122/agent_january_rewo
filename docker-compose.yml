@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: langgraph_rewoo_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: langgraph_rewoo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - langgraph_rewoo_network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  langgraph_rewoo_network:
+    driver: bridge
