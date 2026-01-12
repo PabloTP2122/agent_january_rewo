@@ -1,3 +1,8 @@
+"""Tools executed by worker according with plan and #E's.
+TODO: revisar DRY con claude code.
+
+"""
+
 import math
 import os
 import re
@@ -11,6 +16,10 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
 load_dotenv()
+
+# TODO: agregar también API de Pinecone. Evaluar si muevo esta parte a
+# una función u otro archivo.
+
 VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID")
 if not VECTOR_STORE_ID:
     raise ValueError("VECTOR_STORE_ID no encontrado en el archivo .env")
@@ -432,11 +441,11 @@ def fetch_recipe_nutrition_facts(
     ingredients: list[IngredientInput],
 ) -> dict[str, Any]:
     """
-    Consulta la base de conocimientos (RAG)\\
+    Consulta la base de conocimientos (RAG)
     para obtener valores nutricionales precisos y consolidados.
 
     Usa esta herramienta cuando tengas la lista definitiva de ingredientes y sus pesos.
-    Realiza la búsqueda, escala los valores al peso indicado\\
+    Realiza la búsqueda, escala los valores al peso indicado
     y reporta sustituciones si no hay coincidencia exacta.
     """
     # 3.1 Verificación de Configuración (Ocultar complejidad Legacy)
