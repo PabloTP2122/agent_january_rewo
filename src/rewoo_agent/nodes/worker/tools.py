@@ -1,28 +1,33 @@
-"""Tools executed by worker according with plan and #E's.
-TODO: revisar DRY con claude code.
+"""Tools executed by worker according with plan and #E's."""
 
-"""
-
+import asyncio
 import math
 import os
 import re
 from enum import StrEnum
-from typing import Any, cast
+from typing import Any
 
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig, RunnableSerializable
 from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
-# TODO: agregar también API de Pinecone. Evaluar si muevo esta parte a
-# una función u otro archivo.
 
-VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID")
-if not VECTOR_STORE_ID:
-    raise ValueError("VECTOR_STORE_ID no encontrado en el archivo .env")
+# Base Model con configuración estricta (DRY)
+class StrictBaseModel(BaseModel):
+    """
+    Clase base para todos los schemas de input de herramientas.
+
+    Configuración:
+    - extra="forbid": Rechaza campos no declarados (anti-alucinación del LLM)
+    """
+
+    model_config = {"extra": "forbid"}
 
 
 #  1. Definición de Enums (Guardrails Anti-Alucinación)
@@ -51,23 +56,19 @@ class DietType(StrEnum):
     KETO = "keto"
 
 
-# --- 1. Schemas de Entrada (Strict Validation) ---
-
-
-class SumTotalInput(BaseModel):
-    """Input estricto para sumar calorías. Prohíbe campos extra."""
+# 1. Schemas de Entrada (Strict Validation)
+class SumTotalInput(StrictBaseModel):
+    """Input estricto para sumar calorías."""
 
     kcals_meals: list[float] = Field(
         ...,
         description="Lista de valores calóricos de las comidas (ej. [300.5, 500]).",
         min_length=1,
     )
-    # Configuración de Pydantic v2 para rechazar "ruido" del LLM
-    model_config = {"extra": "forbid"}
 
 
-class VerifyIngredientsInput(BaseModel):
-    """Input estricto para auditoría matemática. Prohíbe campos extra."""
+class VerifyIngredientsInput(StrictBaseModel):
+    """Input estricto para auditoría matemática."""
 
     ingredients: list[float] = Field(
         ...,
@@ -77,11 +78,10 @@ class VerifyIngredientsInput(BaseModel):
     expected_kcal_sum: float = Field(
         ..., description="El total calórico que el agente cree que es correcto."
     )
-    model_config = {"extra": "forbid"}
 
 
 #  2. Schema de Validación (Pydantic v2)
-class NutritionalInput(BaseModel):
+class NutritionalInput(StrictBaseModel):
     """Schema de entrada estricto para la herramienta de nutrición."""
 
     age: int = Field(
@@ -170,35 +170,33 @@ def generate_nutritional_plan(
             c_grams = max(0, int(remaining_cals / 4))
 
         # 2. Diseño de Respuesta: Concisa y Token-Efficient
+        objective_label = objective.value.replace("_", " ").title()
         return (
-            f"PLAN_GENERADO | TDEE: {int(tdee)}kcal | TARGET: {target_calories}kcal\n"
-            f"""MACROS >
-            Proteína: {p_grams}g
-            | Grasas: {f_grams}g
-            | Carbohidratos: {c_grams}g\n"""
-            f"""META > {objective.value.replace("_", " ").title()}
-            ({diet_type.value.title()})"""
+            f"TDEE: {int(tdee)} kcal | Objetivo: {target_calories} kcal\n"
+            f"Proteína: {p_grams}g | Grasas: {f_grams}g | Carbohidratos: {c_grams}g\n"
+            f"Meta: {objective_label} ({diet_type.value.title()})"
         )
 
     except Exception as e:
         # 3. Mensaje de Error Instructivo (Guidance)
-        return f"""ERROR CÁLCULO: Hubo un fallo interno
-         ({str(e)}). Por favor verifica que los datos numéricos
-        (peso/altura) sean lógicos."""
+        return (
+            f"Error en cálculo: {str(e)}. "
+            "Verifica que los datos numéricos (peso/altura) sean lógicos."
+        )
 
 
 @tool("sum_total_kcal", args_schema=SumTotalInput)  # type: ignore [misc]
 def sum_total_kcal(kcals_meals: list[float]) -> str:
     """
     Suma una lista de calorías de comidas y retorna el total exacto.
-    Usa esta herramienta SIEMPRE que necesites agregar ingestas para\\
+    Usa esta herramienta SIEMPRE que necesites agregar ingestas para
     obtener un total diario.
     """
     try:
         total = sum(kcals_meals)
-        return f"TOTAL_CALCULADO: {round(total, 2)} kcal"
+        return f"{round(total, 2)} kcal"
     except Exception as e:
-        return f"ERROR DE CÁLCULO: {str(e)}"
+        return f"Error: {str(e)}. Verifica que la lista contenga solo números."
 
 
 @tool("sum_ingredients_kcal", args_schema=VerifyIngredientsInput)  # type: ignore [misc]
@@ -214,26 +212,25 @@ def sum_ingredients_kcal(ingredients: list[float], expected_kcal_sum: float) -> 
         # 2. Tolerancia Anti-Obsesiva (0.5 kcal)
         # Evita que el agente se bloquee por decimales irrelevantes (ej. 199.9 vs 200)
         if math.isclose(calculated_sum, expected_kcal_sum, abs_tol=0.5):
-            return """VERIFICACIÓN EXITOSA: La suma de ingredientes coincide con el \\
-                total esperado."""
+            return "Verificación exitosa: suma de ingredientes coincide con el total."
 
         # 3. Protocolo de Corrección Prescriptiva (Anti-Bucle)
         real_total = round(calculated_sum, 2)
         diff = round(real_total - expected_kcal_sum, 2)
 
-        # TODO: Si cumple con un 90% de la cantidad, aceptarlo
         return (
-            f"CORRECCIÓN REQUERIDA: La suma matemática real es {real_total} kcal "
-            f"(Diferencia detectada: {diff} kcal). "
-            f"""STOP: No intentes recalcular.\\
-            Actualiza tu respuesta final usando {real_total} kcal."""
+            f"Corrección requerida: suma real es {real_total} kcal "
+            f"(diferencia: {diff} kcal). "
+            f"Usa {real_total} kcal en tu respuesta final."
         )
 
     except Exception as e:
-        return f"ERROR TÉCNICO: {str(e)}"
+        return f"Error técnico: {str(e)}"
 
 
-class MealDistInput(BaseModel):
+class MealDistInput(StrictBaseModel):
+    """Input para distribución de comidas."""
+
     total_calories: float = Field(
         ..., gt=500, lt=10000, description="Objetivo calórico total del día."
     )
@@ -303,21 +300,22 @@ def get_meal_distribution(
     return result
 
 
-class ConsolidateInput(BaseModel):
+class ConsolidateInput(StrictBaseModel):
+    """Input para consolidación de lista de compras."""
+
     ingredients_raw: list[str] = Field(
         ...,
-        description="""Lista bruta de ingredientes \\
-        (ej: ['200g Pechuga de pollo', '100g Pechuga de pollo', '1 manzana']).""",
+        description="Lista de ingredientes (ej: ['200g Pechuga', '100g Arroz']).",
     )
 
 
 @tool("consolidate_shopping_list", args_schema=ConsolidateInput)  # type: ignore [misc]
 def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
     """
-    Procesa, suma y consolida una lista de ingredientes \\
-    crudos en una lista de compra limpia.
+    Consolida una lista de ingredientes crudos en una lista de compra limpia.
 
-    Detecta duplicados, normaliza unidades (kg -> g) y suma las cantidades.
+    Usa esta herramienta cuando tengas ingredientes de múltiples recetas
+    y necesites generar una lista de compras unificada.
     """
     consolidated: dict[str, float] = {}
 
@@ -336,7 +334,7 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
         match = re.search(pattern, clean_item, re.IGNORECASE)
 
         if match:
-            # --- Caso 1: Parseo Exitoso ---
+            #  Caso 1: Parseo Exitoso
             qty = float(match.group("qty"))
             raw_unit = (match.group("unit") or "unidad").lower().strip()
             item_name = match.group("item").lower().strip()
@@ -358,7 +356,7 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
             consolidated[key] = consolidated.get(key, 0.0) + qty
 
         else:
-            # --- Caso 2: Fallback (Items sin cantidad clara) ---
+            #  Caso 2: Fallback (Items sin cantidad clara)
             # Ej: "Sal y pimienta", "Un poco de aceite"
             # No lo consideramos error, sino un ítem "genérico"
             key = f"{clean_item.lower()} (varios)"
@@ -366,7 +364,7 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
             # el valor numérico es simbólico aquí
             consolidated[key] = consolidated.get(key, 0.0) + 1.0
 
-    # --- Generación de Salida ---
+    #  Generación de Salida
     final_list = []
     for key, total_qty in consolidated.items():
         # Desempaquetar clave: "pechuga de pollo (g)"
@@ -387,138 +385,214 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
             # Fallback de seguridad extrema por si el split falla
             final_list.append(f"- {key}")
 
-    return "LISTA DE COMPRA CONSOLIDADA:\n" + "\n".join(sorted(final_list))
+    return "\n".join(sorted(final_list))
 
 
-class IngredientInput(BaseModel):
-    name: str = Field(
-        ..., description="Nombre del ingrediente (ej. 'Salami', 'Harina')."
+class IngredientInput(StrictBaseModel):
+    """Estructura de un ingrediente individual proveniente del Planner."""
+
+    nombre: str = Field(
+        ...,
+        description="Nombre del ingrediente identificado en el plan.",
     )
-    weight_grams: float = Field(
-        ..., gt=0, description="Peso en gramos del ingrediente."
+    peso_gramos: float = Field(
+        ...,
+        description="Peso numérico en gramos para el cálculo.",
     )
 
 
-class RecipeInput(BaseModel):
-    ingredients: list[IngredientInput] = Field(
-        ..., description="Lista de ingredientes a analizar.", min_length=1
+class RecipeAnalysisInput(StrictBaseModel):
+    """Schema de entrada estricto para la herramienta de análisis de recetas."""
+
+    ingredientes: list[IngredientInput] = Field(
+        ...,
+        description="Lista definitiva de ingredientes y pesos generada por el Planner.",
     )
-    # Prohibir campos extra para evitar alucinaciones de argumentos
-    model_config = {"extra": "forbid"}
 
 
-# Schemas de Salida (Structured Output) - Diseño de Respuesta
-class NutrientData(BaseModel):
+class ProcessedItem(BaseModel):
+    input_name: str
+    matched_db_name: str
+    total_kcal: float
+    notes: str
+
+
+class NutritionResult(BaseModel):
+    """Resultado consolidado del análisis nutricional de una receta."""
+
+    processed_items: list[ProcessedItem]
+    total_recipe_kcal: float
+    warnings: str | None = Field(
+        None, description="Reporte de fallos de búsqueda o inconsistencias."
+    )
+
+
+class NutriFacts(BaseModel):
+    """Schema para extracción de datos nutricionales via RAG."""
+
     food_name: str = Field(
-        ..., description="Nombre del alimento encontrado en la base de datos."
+        ...,
+        description="Nombre del alimento en el texto recuperado.",
     )
-    matched_weight: float = Field(
-        ..., description="Peso utilizado para el cálculo (g)."
+    calories_100g: float = Field(
+        ...,
+        description="Calorías por 100g.",
     )
-    kcal: float = Field(..., description="Calorías calculadas para el peso dado.")
-    protein: float = Field(..., description="Proteínas (g).")
-    carbs: float = Field(..., description="Carbohidratos (g).")
-    fats: float = Field(..., description="Grasas (g).")
-    fiber: float = Field(default=0.0, description="Fibra (g).")
-    # Campo solicitado para manejar "match cercano"
     notes: str = Field(
-        default="Coincidencia exacta",
-        description="""Nota sobre si se usó el alimento exacto o un sustituto cercano\\
-        (ej. 'Se usó Salami Genérico en lugar de Salami Milano').""",
+        ...,
+        description="Notas sobre la calidad de la coincidencia.",
     )
 
 
-class RecipeAnalysisOutput(BaseModel):
-    items: list[NutrientData] = Field(..., description="Desglose por ingrediente.")
-    total_kcal: float = Field(..., description="Suma total de calorías de la receta.")
-    general_warning: str | None = Field(
-        None, description="Advertencias nutricionales (ej. 'Alto en sodio')."
-    )
-
-
-@tool("fetch_recipe_nutrition_facts", args_schema=RecipeInput)  # type: ignore [misc]
-def fetch_recipe_nutrition_facts(
-    ingredients: list[IngredientInput],
-) -> dict[str, Any]:
+class ResourceLoader:
     """
-    Consulta la base de conocimientos (RAG)
-    para obtener valores nutricionales precisos y consolidados.
-
-    Usa esta herramienta cuando tengas la lista definitiva de ingredientes y sus pesos.
-    Realiza la búsqueda, escala los valores al peso indicado
-    y reporta sustituciones si no hay coincidencia exacta.
+    Singleton para gestionar conexiones.
+    Centraliza la validación de configuración.
     """
-    # 3.1 Verificación de Configuración (Ocultar complejidad Legacy)
-    vector_store_id = os.getenv("VECTOR_STORE_ID")
-    if not vector_store_id:
-        # Error Instructivo
-        return {
-            "error": """CONFIG_ERROR: No se encontró VECTOR_STORE_ID.\\
-             Por favor verifica las variables de entorno."""
-        }
 
+    _retriever = None
+    _extractor_llm = None
+
+    @staticmethod
+    def _validate_env_vars() -> None:
+        """Valida que las credenciales críticas existan antes de intentar conectar."""
+        required_vars = ["PINECONE_API_KEY", "OPENAI_API_KEY", "PINECONE_INDEX_NAME"]
+        missing = [var for var in required_vars if not os.getenv(var)]
+
+        if missing:
+            raise ConnectionError(
+                f"""Configuración faltante en el entorno del Worker:
+                 {", ".join(missing)}. """
+                "Asegúrate de que las variables de entorno estén cargadas."
+            )
+
+    @classmethod
+    def get_retriever(cls) -> Any:
+        if cls._retriever is None:
+            # 1. Validamos antes de conectar
+            cls._validate_env_vars()
+
+            # 2. Obtenemos configuración del entorno
+            index_name = os.getenv("PINECONE_INDEX_NAME", "")
+            embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+            # Default seguro
+
+            try:
+                embeddings = OpenAIEmbeddings(model=embedding_model)
+
+                # PineconeVectorStore busca automáticamente
+                # 'PINECONE_API_KEY' en os.environ
+                # No hace falta pasarlo explícitamente si la variable se llama así.
+                vector_store = PineconeVectorStore.from_existing_index(
+                    index_name=index_name, embedding=embeddings
+                )
+                cls._retriever = vector_store.as_retriever(search_kwargs={"k": 1})
+
+            except Exception as e:
+                # Capturamos errores de librería (ej. índice no existe, key inválida)
+                raise ConnectionError(  # noqa: B904
+                    f"Error inicializando conexión a Pinecone: {str(e)}"
+                )
+
+        return cls._retriever
+
+    @classmethod
+    def get_extractor_chain(cls) -> RunnableSerializable[dict, Any]:
+        if cls._extractor_llm is None:
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+            prompt = ChatPromptTemplate.from_template(
+                """Analiza el contexto. Extrae datos para: '{ingredient_name}'.
+                Contexto: {context}
+                Si no coincide, retorna 0 y explica en notas."""
+            )
+            cls._extractor_llm = prompt | llm.with_structured_output(NutriFacts)
+        return cls._extractor_llm
+
+
+async def _process_ingredient_task(ing: IngredientInput) -> ProcessedItem:
+    """Unidad de trabajo atómica para un ingrediente."""
     try:
-        # 3.2 Configuración del RAG Interno (Micro-Agente encapsulado)
-        # Esto cumple con "Responsabilidad Única":
-        # la tool se encarga de resolver la data.
-        llm = init_chat_model("gpt-4o", model_provider="openai", temperature=0)
+        retriever = ResourceLoader.get_retriever()
+        extractor = ResourceLoader.get_extractor_chain()
 
-        # Definición de la herramienta de búsqueda de OpenAI
-        file_search_tool_def = {
-            "type": "file_search",
-            "vector_store_ids": [vector_store_id],
-        }
+        # 1. Retrieval
+        docs = await retriever.ainvoke(ing.nombre)
 
-        # Bindear herramienta y Structured Output
-        llm_rag_structured = llm.bind_tools(
-            [file_search_tool_def]
-        ).with_structured_output(RecipeAnalysisOutput)
+        if not docs:
+            return ProcessedItem(
+                input_name=ing.nombre,
+                matched_db_name="MISSING",
+                total_kcal=0,
+                notes="No encontrado en Knowledge Base.",
+            )
 
-        # 3.3 Construcción del Prompt Interno
-        # Instruimos al modelo para manejar la lógica
-        # de "Equivalente más cercano" aquí dentro.
-        prompt_text = """
-        Eres un asistente nutricional experto con acceso a una base de datos de\\
-        alimentos (File Search).
-        Tu tarea es buscar los valores nutricionales\\
-        para la siguiente lista de ingredientes: {ingredients_list}
-
-        REGLAS CRÍTICAS:
-        1. Busca cada ingrediente en la base de datos.
-        2. Si encuentras el ingrediente exacto, usa sus datos.
-        3. Si NO encuentras el ingrediente exacto, busca el EQUIVALENTE MÁS CERCANO\\
-        (ej. si piden 'Salami Milano' y solo hay 'Salami', usa 'Salami').
-        4. Si usas un equivalente, DEBES indicarlo claramente en\\
-        el campo 'notes' (ej. "No se halló X, se usó Y").
-        5. Escala los valores nutricionales\\
-        (por 100g) al peso solicitado para cada item.
-        6. Calcula los totales de la receta.
-        """
-
-        prompt = ChatPromptTemplate.from_template(prompt_text)
-        chain = prompt | llm_rag_structured
-
-        # 3.4 Ejecución (Manos)
-        # Convertimos la entrada a un formato string amigable para el prompt interno
-        ingredients_str = ", ".join(
-            [f"{i.name} ({i.weight_grams}g)" for i in ingredients]
+        # 2. Extraction
+        raw_data = await extractor.ainvoke(
+            {"ingredient_name": ing.nombre, "context": docs[0].page_content}
         )
 
-        # Invocación determinista
-        result = chain.invoke({"ingredients_list": ingredients_str})
-
-        # 3.5 Retorno (Output Design) - Token Efficiency
-        # Retornamos el objeto validado como
-        # dict para que el Agente principal lo consuma
-        return cast(dict[str, Any], result.model_dump())
+        # 3. Calculation
+        factor = ing.peso_gramos / 100.0
+        return ProcessedItem(
+            input_name=ing.nombre,
+            matched_db_name=raw_data.food_name,
+            total_kcal=round(raw_data.calories_100g * factor, 1),
+            notes=raw_data.notes,
+        )
 
     except Exception as e:
-        # Mensaje de Error Instructivo
-        return {
-            "error": f"""RAG_FAILURE: Hubo un error al consultar la base de datos
-            nutricional. Detalle: {str(e)}. """
-            "Intenta simplificar los nombres de los ingredientes."
-        }
+        return ProcessedItem(
+            input_name=ing.nombre,
+            matched_db_name="ERROR",
+            total_kcal=0,
+            notes=f"Excepción interna: {str(e)}",
+        )
+
+
+@tool("calculate_recipe_nutrition", args_schema=RecipeAnalysisInput)  # type: ignore [misc]
+async def calculate_recipe_nutrition(
+    ingredientes: list[IngredientInput], _config: RunnableConfig | None = None
+) -> Any:
+    """
+    Consulta la base de conocimientos (RAG) para obtener valores
+    nutricionales precisos y consolidados.
+
+    Usa esta herramienta cuando tengas la lista definitiva de ingredientes
+    y sus pesos proveniente del plan.
+    Realiza la búsqueda vectorial, escala los valores al peso indicado
+    y reporta sustituciones o advertencias si no hay coincidencia exacta.
+    """
+
+    # Fail-fast si la infraestructura no responde
+    try:
+        ResourceLoader.get_retriever()
+    except ConnectionError as e:
+        return {"system_error": str(e), "status": "failed"}
+
+    # Ejecución paralela (Worker behavior)
+    tasks = [_process_ingredient_task(ing) for ing in ingredientes]
+    results = await asyncio.gather(*tasks)
+
+    # Consolidación de resultados
+    clean_items = []
+    total_kcal = 0.0
+    warnings = []
+
+    for item in results:
+        clean_items.append(item)
+        total_kcal += item.total_kcal
+
+        if item.matched_db_name in ["MISSING", "ERROR"]:
+            warnings.append(f"[{item.input_name}]: {item.notes}")
+
+    output = NutritionResult(
+        processed_items=clean_items,
+        total_recipe_kcal=round(total_kcal, 1),
+        warnings=" | ".join(warnings) if warnings else None,
+    )
+
+    return output.model_dump()
 
 
 tools = [
@@ -527,5 +601,5 @@ tools = [
     sum_ingredients_kcal,
     get_meal_distribution,
     consolidate_shopping_list,
-    fetch_recipe_nutrition_facts,
+    calculate_recipe_nutrition,
 ]
