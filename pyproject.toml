@@ -19,6 +19,7 @@ dependencies = [
     "ragas>=0.0.19",
     "langgraph-api==0.6",
     "copilotkit==0.1.72",
+    "langchain-pinecone>=0.2.13",
 ]
 
 [dependency-groups]
