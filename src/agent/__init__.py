@@ -1,1 +1,1 @@
-"""Simple agent package to test agent kit."""
+"""Simple agent package to test copilotkit/React UI."""
