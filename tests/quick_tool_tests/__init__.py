@@ -1,0 +1,1 @@
+"""Smoke tool tests."""
