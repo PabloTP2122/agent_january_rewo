@@ -67,7 +67,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "chromadb", specifier = ">=1.4.0" },
-    { name = "copilotkit", specifier = "==0.1.72" },
+    { name = "copilotkit", extras = ["langgraph"], specifier = "==0.1.72" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.0,<0.116.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "langchain", specifier = "==1" },
