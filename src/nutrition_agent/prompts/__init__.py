@@ -2,9 +2,13 @@
 
 Exports:
     DATA_COLLECTION_PROMPT: For conversational UserProfile extraction
-    RECIPE_GENERATION_PROMPT: For single meal generation
-    LAST_MEAL_INSTRUCTION: Appended when generating the last meal
-    REGULAR_MEAL_INSTRUCTION: Appended for non-last meals
+    RECIPE_GENERATION_PROMPT: For parallel batch meal generation
+    LAST_MEAL_INSTRUCTION: For last meal with exact budget (stricter tolerance)
+    REGULAR_MEAL_INSTRUCTION: For regular meals (standard tolerance)
+
+Architecture: Parallel Batch Generation (v2)
+- Prompts optimized for independent parallel generation
+- No sequential context accumulation (O(n) vs O(n²) tokens)
 """
 
 from src.nutrition_agent.prompts.data_collection import DATA_COLLECTION_PROMPT

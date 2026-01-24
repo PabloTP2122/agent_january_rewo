@@ -1,0 +1,104 @@
+# Nutrition Agent Implementation Progress
+
+## Phase 1: Shared Foundation
+- [x] Created src/shared/enums.py with ActivityLevel, Objective, DietType, MealTime
+- [x] Created src/shared/llm.py with get_llm() factory (Helicone proxy for OpenAI, Gemini support)
+- [x] Created src/shared/tools.py with 6 migrated tools from rewoo_agent
+- [x] Migrated auxiliary classes: StrictBaseModel, ResourceLoader, NutriFacts, ProcessedItem, NutritionResult
+- [x] Updated src/shared/__init__.py to export all public symbols
+- [x] Verified imports: `from src.shared import get_llm, ActivityLevel, generate_nutritional_plan`
+- [x] Pre-commit passes (ruff check, ruff format, mypy)
+Commit: 3bbd04b
+Date: 2026-01-23
+
+## Phase 2: Models
+- [x] Create src/nutrition_agent/models/user_profile.py with UserProfile model
+- [x] Create src/nutrition_agent/models/nutritional_targets.py with NutritionalTargets model
+  - 9 fields: bmr, tdee, target_calories, protein_*, carbs_*, fat_*
+  - Cross-field validators: macro percentages sum, calorie coherence, gram alignment
+  - Handles all objectives: fat_loss (0.8x), maintenance (1.0x), muscle_gain (1.1x)
+  - Validated with 7 test scenarios (all passing)
+- [x] Create src/nutrition_agent/models/diet_plan.py with Meal, Macronutrients, ShoppingListItem, DietPlan
+  - Macronutrients: 6 fields for percentage and gram breakdown
+  - Meal: 8 fields including MealTime enum, ingredients, preparation steps, optional alternative
+  - ShoppingListItem: consolidated items with food name and quantity
+  - DietPlan: 6 fields with 1-6 meals constraint, shopping list, day identifier
+  - Validated with 15 constraint tests (all passing)
+- [x] Update src/nutrition_agent/models/__init__.py to export all models
+- [x] Pre-commit passes (ruff, mypy)
+Commits: 86a9881 (UserProfile), 37696f2 (NutritionalTargets), a9672d9 (Diet Plan)
+Date: 2026-01-23
+
+## Phase 3: State and Prompts
+- [x] Implement src/nutrition_agent/state.py with NutritionAgentState
+  - 12 state fields across 5 workflow phases
+  - Uses operator.add reducer for meals_completed accumulation
+  - Inherits messages/copilotkit from CopilotKitState
+  - Validated with architect-langgraph agent
+  Commit: fc9c628
+  Date: 2026-01-23
+- [x] Create prompts/data_collection.py with DATA_COLLECTION_PROMPT
+  - Prompt for conversational UserProfile extraction
+  - Documents 9 fields (6 required, 3 optional)
+  Commit: a670c77
+  Date: 2026-01-23
+- [x] Create prompts/recipe_generation.py with RECIPE_GENERATION_PROMPT
+  - Main prompt with placeholders for meal context
+  - LAST_MEAL_INSTRUCTION for precise budget closing
+  - REGULAR_MEAL_INSTRUCTION for standard meals
+  Commit: eb958d2
+  Date: 2026-01-23
+- [x] Update prompts/__init__.py to export prompts
+  - Exports all 4 prompt constants
+  - __all__ defines public API
+  Commit: a552017
+  Date: 2026-01-23
+
+**Phase 3 Complete**
+
+### Phase 3.5: Architecture Update - Parallel Batch Generation (v2)
+- [x] Updated state.py for batch architecture:
+  - Removed: current_meal_index, meals_completed (with operator.add reducer),
+    skip_remaining_reviews, meals_approved
+  - Added: daily_meals (list[Meal]), meal_generation_errors (dict[str, str]),
+    selected_meal_to_change (str | None)
+  - Changed: review_decision from ["approve", "change", "skip_all"] to
+    ["approve", "change_meal", "regenerate_all"]
+  - Removed operator import (no longer using reducer pattern)
+- [x] Updated prompts/recipe_generation.py for parallel generation:
+  - Removed sequential context: consumed_kcal, current_meal_index
+  - Added macro context: daily_protein_grams, daily_carbs_grams, daily_fat_grams
+  - Changed is_last_meal_instruction to special_instructions placeholder
+  - Updated LAST_MEAL_INSTRUCTION with consumed_kcal and remaining_budget params
+  - Added note about parallel generation context
+- [x] Updated prompts/__init__.py docstring to reflect batch architecture
+- [x] Updated spec/prd.md with complete batch architecture specification:
+  - Section 3.3: New state fields
+  - Section 3.4: New graph flow diagram
+  - Section 3.5: Nodes 3, 3b, 4 updated for batch
+  - Section 3.5.2: Hybrid parallel algorithm
+  - Section 3.6: New conditional edges
+  - Phase 4-5: Updated tasks and templates
+  - Appendix D: Architecture change documentation
+Date: 2026-01-24
+
+## Phase 4: Nodes Implementation
+- [ ] Implement nodes/data_collection.py (LLM node)
+- [ ] Implement nodes/calculation.py (deterministic)
+- [ ] Implement nodes/recipe_generation.py (LLM node)
+- [ ] Implement nodes/meal_review.py (HITL with interrupt())
+- [ ] Implement nodes/validation.py (deterministic)
+- [ ] Update nodes/__init__.py
+
+## Phase 5: Graph Assembly
+- [ ] Implement graph.py with StateGraph, nodes, and conditional edges
+- [ ] Export graph from __init__.py
+
+## Phase 6: API Integration
+- [ ] Register nutrition_agent in src/api/main.py
+- [ ] Update langgraph.json if exists
+
+## Phase 7: Testing & Quality Assurance
+- [ ] Create tests/tools/test_shared_tools.py
+- [ ] Create tests/quick_tool_tests/test_calculation_node.py
+- [ ] Create tests/evaluation/eval_recipe_generation.py
