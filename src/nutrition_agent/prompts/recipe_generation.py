@@ -34,12 +34,14 @@ Generate a Meal with the following structure:
 - alternative (optional): A simpler alternative if available
 
 IMPORTANT:
-- Be PRECISE with calorie estimation
-- Ingredients will be validated via RAG lookup
+- Be PRECISE with calorie estimation - ingredients will be cross-checked against
+  a nutritional database
+- If total calories don't match target (±5%), you'll be asked to regenerate
+  with adjusted portions
+- Use realistic portion sizes for accuracy (e.g., "pollo 150g" not "pollo 500g")
 - If this is the last meal, hit the target EXACTLY to close the daily budget
 - Do NOT include any foods from the excluded list: {excluded_foods}
 - Keep the meal appropriate for {diet_type} diet
-- Ensure total_calories is realistic for the ingredients listed
 - Use metric units (grams, ml) for all quantities
 """
 
