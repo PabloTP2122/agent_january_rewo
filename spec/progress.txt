@@ -134,7 +134,13 @@ Date: 2026-01-24
   - Uses consolidate_shopping_list tool
   - Builds final DietPlan with Macronutrients
   Date: 2026-01-24
-- [ ] Update nodes/__init__.py
+- [x] Update nodes/__init__.py
+  - Exports all 6 nodes: data_collection, calculation, recipe_generation_batch,
+    recipe_generation_single, meal_review_batch, validation
+  - Updated docstring for batch architecture
+  Date: 2026-01-24
+
+**Phase 4 Complete**
 
 ## Phase 5: Graph Assembly
 - [ ] Implement graph.py with StateGraph, nodes, and conditional edges
