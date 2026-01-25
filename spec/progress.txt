@@ -114,7 +114,13 @@ Date: 2026-01-24
   - Helper _parse_ingredients_for_rag() for ingredient parsing
   - Returns {"daily_meals": [...], "meal_generation_errors": {...}}
   Date: 2026-01-24
-- [ ] Implement nodes/recipe_generation_single.py (LLM node, single meal)
+- [x] Implement nodes/recipe_generation_single.py (LLM node, single meal)
+  - Regenerates ONE meal when user selects "change_meal" in HITL
+  - Incorporates state.user_feedback into prompt
+  - Uses same pre-validation loop as batch (MAX_ATTEMPTS=3, ±5%)
+  - Returns updated daily_meals + resets review_decision to None
+  - Clears selected_meal_to_change and user_feedback after use
+  Date: 2026-01-24
 - [ ] Implement nodes/meal_review_batch.py (HITL with interrupt())
 - [ ] Implement nodes/validation.py (deterministic)
 - [ ] Update nodes/__init__.py
