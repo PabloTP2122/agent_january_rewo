@@ -127,7 +127,13 @@ Date: 2026-01-24
   - User options: approve, change_meal, regenerate_all
   - Returns review_decision, selected_meal_to_change, user_feedback
   Date: 2026-01-24
-- [ ] Implement nodes/validation.py (deterministic)
+- [x] Implement nodes/validation.py (deterministic)
+  - Sums total calories from daily_meals
+  - Validates against target with ±5% tolerance
+  - Checks meal count matches expected
+  - Uses consolidate_shopping_list tool
+  - Builds final DietPlan with Macronutrients
+  Date: 2026-01-24
 - [ ] Update nodes/__init__.py
 
 ## Phase 5: Graph Assembly
