@@ -153,6 +153,28 @@ class NutriFacts(BaseModel):
     )
 
 
+class NutritionalPlanOutput(BaseModel):
+    """Structured output for generate_nutritional_plan tool.
+
+    This model ensures type safety and validation for nutritional calculations.
+    All percentage fields should sum to ~100%.
+    """
+
+    bmr: float = Field(..., description="Basal Metabolic Rate (kcal/day)")
+    tdee: float = Field(..., description="Total Daily Energy Expenditure (kcal/day)")
+    target_calories: float = Field(
+        ..., description="Adjusted calorie target for objective"
+    )
+    protein_grams: float = Field(..., description="Daily protein target in grams")
+    protein_percentage: float = Field(..., description="Protein as % of total calories")
+    carbs_grams: float = Field(..., description="Daily carbs target in grams")
+    carbs_percentage: float = Field(..., description="Carbs as % of total calories")
+    fat_grams: float = Field(..., description="Daily fat target in grams")
+    fat_percentage: float = Field(..., description="Fat as % of total calories")
+    diet_type: DietType = Field(..., description="Diet type used")
+    objective: Objective = Field(..., description="Objective applied")
+
+
 # 3. Business Logic (Encapsulation)
 def _calculate_bmr_mifflin(weight: int, height: int, age: int, gender: str) -> float:
     """Internal deterministic BMR calculation."""
@@ -246,13 +268,18 @@ def generate_nutritional_plan(
     activity_level: ActivityLevel,
     objective: Objective,
     diet_type: DietType = DietType.NORMAL,
-) -> str:
+) -> dict[str, Any]:
     """
     Calculates daily caloric needs and macronutrient distribution.
 
     Use this tool when the user provides their physical data
     and wants a diet plan or to know how many calories to consume.
     DO NOT use if data like weight or height is missing.
+
+    Returns:
+        dict with nutritional data: bmr, tdee, target_calories,
+        protein/carbs/fat grams and percentages, diet_type, objective.
+        On error, returns dict with "error" and "message" keys.
     """
     try:
         # 1. "Hands": Pure mathematical calculations
@@ -270,34 +297,58 @@ def generate_nutritional_plan(
 
         # Macro logic
         if diet_type == DietType.KETO:
-            p_grams = int((target_calories * 0.25) / 4)
-            f_grams = int((target_calories * 0.70) / 9)
-            c_grams = int((target_calories * 0.05) / 4)
+            p_grams = (target_calories * 0.25) / 4
+            f_grams = (target_calories * 0.70) / 9
+            c_grams = (target_calories * 0.05) / 4
+
+            # Percentages for keto (fixed)
+            p_pct = 25.0
+            c_pct = 5.0
+            f_pct = 70.0
         else:
             # Normal logic: Protein indexed to weight, rest adjusts
             p_mult = (
                 2.2 if objective in [Objective.FAT_LOSS, Objective.MUSCLE_GAIN] else 1.6
             )
-            p_grams = int(weight * p_mult)
-            f_grams = int(weight * 0.9)  # 0.9g/kg fat base
+            p_grams = weight * p_mult
+            f_grams = weight * 0.9  # 0.9g/kg fat base
 
             remaining_cals = target_calories - (p_grams * 4) - (f_grams * 9)
-            c_grams = max(0, int(remaining_cals / 4))
+            c_grams = max(0, remaining_cals / 4)
 
-        # 2. Concise, token-efficient response
-        objective_label = objective.value.replace("_", " ").title()
-        return (
-            f"TDEE: {int(tdee)} kcal | Target: {target_calories} kcal\n"
-            f"Protein: {p_grams}g | Fat: {f_grams}g | Carbs: {c_grams}g\n"
-            f"Goal: {objective_label} ({diet_type.value.title()})"
+            # Calculate percentages from actual macro grams
+            total_macro_cals = (p_grams * 4) + (c_grams * 4) + (f_grams * 9)
+            if total_macro_cals > 0:
+                p_pct = (p_grams * 4 / total_macro_cals) * 100
+                c_pct = (c_grams * 4 / total_macro_cals) * 100
+                f_pct = (f_grams * 9 / total_macro_cals) * 100
+            else:
+                p_pct = c_pct = f_pct = 0.0
+
+        # 2. Structured output (validated by Pydantic)
+        output = NutritionalPlanOutput(
+            bmr=round(bmr, 2),
+            tdee=round(tdee, 2),
+            target_calories=round(target_calories, 2),
+            protein_grams=round(p_grams, 2),
+            protein_percentage=round(p_pct, 2),
+            carbs_grams=round(c_grams, 2),
+            carbs_percentage=round(c_pct, 2),
+            fat_grams=round(f_grams, 2),
+            fat_percentage=round(f_pct, 2),
+            diet_type=diet_type,
+            objective=objective,
         )
+
+        result: dict[str, Any] = output.model_dump()
+        return result
 
     except Exception as e:
-        # 3. Instructive error message
-        return (
-            f"Calculation error: {str(e)}. "
-            "Verify that numeric data (weight/height) is logical."
-        )
+        # 3. Instructive error message (as dict for consistency)
+        return {
+            "error": str(e),
+            "message": "Calculation error. Verify numeric data is logical.",
+        }
 
 
 @tool("sum_total_kcal", args_schema=SumTotalInput)  # type: ignore [misc]

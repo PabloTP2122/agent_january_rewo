@@ -83,10 +83,32 @@ Date: 2026-01-23
 Date: 2026-01-24
 
 ## Phase 4: Nodes Implementation
-- [ ] Implement nodes/data_collection.py (LLM node)
-- [ ] Implement nodes/calculation.py (deterministic)
-- [ ] Implement nodes/recipe_generation.py (LLM node)
-- [ ] Implement nodes/meal_review.py (HITL with interrupt())
+- [x] Implement nodes/data_collection.py (LLM node)
+  - Extracts UserProfile from conversation using llm.with_structured_output()
+  - Validates required fields: age, gender, weight, height, activity_level, objective
+  - Returns empty dict if profile already complete (skip re-extraction)
+  - Handles extraction failures gracefully
+  Commit: 2452436
+  Date: 2026-01-24
+- [x] Implement nodes/calculation.py (deterministic)
+  - Uses Mifflin-St Jeor for BMR (aligned with tools.py)
+  - TDEE = BMR × activity multiplier
+  - Objective adjustments: 0.83 (fat_loss), 1.0 (maintenance), 1.15 (muscle_gain)
+  - Macros: normal (weight-indexed protein) and keto support
+  - Uses get_meal_distribution tool from src.shared
+  Commit: 8900b27
+  Date: 2026-01-24
+- [x] Refactor generate_nutritional_plan tool (Option C)
+  - Modified src/shared/tools.py: generate_nutritional_plan now returns dict[str, Any]
+  - Added NutritionalPlanOutput Pydantic model for structured validation
+  - Refactored nodes/calculation.py to use generate_nutritional_plan tool (DRY principle)
+  - Updated tests/tools/test_generate_nutritional_plan.py for new return type
+  - Added tests: test_fat_loss_calculation, test_keto_diet_macros
+  - All 5 tests passing
+  Date: 2026-01-24
+- [ ] Implement nodes/recipe_generation_batch.py (LLM node, parallel)
+- [ ] Implement nodes/recipe_generation_single.py (LLM node, single meal)
+- [ ] Implement nodes/meal_review_batch.py (HITL with interrupt())
 - [ ] Implement nodes/validation.py (deterministic)
 - [ ] Update nodes/__init__.py
 
