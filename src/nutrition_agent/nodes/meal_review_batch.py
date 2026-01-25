@@ -37,16 +37,19 @@ def meal_review_batch(state: NutritionAgentState) -> dict[str, Any]:
         - selected_meal_to_change: meal_time if change_meal, else None
         - user_feedback: feedback text if change_meal, else None
     """
+    # Get state values using dict access
+    daily_meals = state.get("daily_meals", [])
+    nutritional_targets = state.get("nutritional_targets")
+    meal_generation_errors = state.get("meal_generation_errors", {})
+
     # Build interrupt payload with all relevant information
     interrupt_payload = {
         "type": "meal_plan_review",
-        "daily_meals": [meal.model_dump() for meal in state.daily_meals],
+        "daily_meals": [meal.model_dump() for meal in daily_meals],
         "nutritional_targets": (
-            state.nutritional_targets.model_dump()
-            if state.nutritional_targets
-            else None
+            nutritional_targets.model_dump() if nutritional_targets else None
         ),
-        "meal_generation_errors": state.meal_generation_errors,
+        "meal_generation_errors": meal_generation_errors,
         "options": [
             {"action": "approve", "label": "Approve Entire Plan"},
             {

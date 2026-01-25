@@ -184,14 +184,17 @@ async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:
         - daily_meals: List of generated Meal objects
         - meal_generation_errors: Dict mapping meal_time to error message
     """
-    if state.meal_distribution is None:
+    meal_distribution = state.get("meal_distribution")
+    if meal_distribution is None:
         raise ValueError("meal_distribution is required for recipe generation")
-    if state.user_profile is None:
+    user_profile = state.get("user_profile")
+    if user_profile is None:
         raise ValueError("user_profile is required for recipe generation")
-    if state.nutritional_targets is None:
+    nutritional_targets = state.get("nutritional_targets")
+    if nutritional_targets is None:
         raise ValueError("nutritional_targets is required for recipe generation")
 
-    meal_times = list(state.meal_distribution.keys())
+    meal_times = list(meal_distribution.keys())
     total_meals = len(meal_times)
 
     if total_meals == 0:
@@ -201,9 +204,9 @@ async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:
         # Edge case: only one meal, generate it as last meal (stricter tolerance)
         result = await _generate_single_meal_with_validation(
             meal_time=meal_times[0],
-            target_calories=state.meal_distribution[meal_times[0]],
-            user_profile=state.user_profile,
-            nutritional_targets=state.nutritional_targets,
+            target_calories=meal_distribution[meal_times[0]],
+            user_profile=user_profile,
+            nutritional_targets=nutritional_targets,
             total_meals=1,
             current_meal_number=1,
             is_last_meal=True,
@@ -219,9 +222,9 @@ async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:
     for idx in range(total_meals - 1):
         task = _generate_single_meal_with_validation(
             meal_time=meal_times[idx],
-            target_calories=state.meal_distribution[meal_times[idx]],
-            user_profile=state.user_profile,
-            nutritional_targets=state.nutritional_targets,
+            target_calories=meal_distribution[meal_times[idx]],
+            user_profile=user_profile,
+            nutritional_targets=nutritional_targets,
             total_meals=total_meals,
             current_meal_number=idx + 1,
             is_last_meal=False,
@@ -238,12 +241,12 @@ async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:
     )
 
     # 3. Generate LAST meal sequentially with EXACT remaining budget
-    remaining_budget = state.nutritional_targets.target_calories - consumed_kcal
+    remaining_budget = nutritional_targets.target_calories - consumed_kcal
     last_meal_result = await _generate_single_meal_with_validation(
         meal_time=meal_times[-1],
         target_calories=remaining_budget,
-        user_profile=state.user_profile,
-        nutritional_targets=state.nutritional_targets,
+        user_profile=user_profile,
+        nutritional_targets=nutritional_targets,
         total_meals=total_meals,
         current_meal_number=total_meals,
         is_last_meal=True,

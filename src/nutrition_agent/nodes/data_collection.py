@@ -34,11 +34,11 @@ async def data_collection(state: NutritionAgentState) -> dict:
         - missing_fields: List of fields still needed from user
     """
     # If profile already exists and is complete, skip extraction
-    if state.user_profile is not None and not state.missing_fields:
+    if state.get("user_profile") is not None and not state.get("missing_fields", []):
         return {}
 
     # Get messages from state
-    messages = state.messages
+    messages = state.get("messages", [])
     if not messages:
         return {
             "user_profile": None,
@@ -46,6 +46,7 @@ async def data_collection(state: NutritionAgentState) -> dict:
         }
 
     # Use LLM with structured output to extract UserProfile
+    # llm = get_llm("gemini-2.5-flash")
     llm = get_llm()
     structured_llm = llm.with_structured_output(UserProfile)
 

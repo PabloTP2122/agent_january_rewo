@@ -29,7 +29,7 @@ def calculation(state: NutritionAgentState) -> dict[str, Any]:
         - nutritional_targets: NutritionalTargets model
         - meal_distribution: dict mapping meal names to calories
     """
-    profile = state.user_profile
+    profile = state.get("user_profile")
     if profile is None:
         raise ValueError("user_profile is required for calculation")
 

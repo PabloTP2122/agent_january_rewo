@@ -46,7 +46,7 @@ def route_after_data_collection(state: NutritionAgentState) -> str:
     Returns:
         "data_collection" if profile incomplete, "calculation" otherwise
     """
-    if state.user_profile is None or state.missing_fields:
+    if state.get("user_profile") is None or state.get("missing_fields", []):
         return "data_collection"
     return "calculation"
 
@@ -64,7 +64,7 @@ def route_after_meal_review_batch(state: NutritionAgentState) -> str:
         "change_meal": "recipe_generation_single",
         "regenerate_all": "recipe_generation_batch",
     }
-    return routes.get(state.review_decision or "", "validation")
+    return routes.get(state.get("review_decision") or "", "validation")
 
 
 def route_after_validation(state: NutritionAgentState) -> str:
@@ -73,7 +73,7 @@ def route_after_validation(state: NutritionAgentState) -> str:
     Returns:
         "__end__" if valid, "recipe_generation_batch" if validation errors
     """
-    if state.validation_errors:
+    if state.get("validation_errors", []):
         return "recipe_generation_batch"
     return str(END)
 

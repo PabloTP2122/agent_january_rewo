@@ -166,17 +166,21 @@ async def recipe_generation_single(state: NutritionAgentState) -> dict[str, Any]
         - review_decision: None (reset for re-review)
         - meal_generation_errors: Updated errors dict
     """
-    if state.selected_meal_to_change is None:
+    selected_meal_to_change = state.get("selected_meal_to_change")
+    if selected_meal_to_change is None:
         raise ValueError("selected_meal_to_change is required")
-    if state.meal_distribution is None:
+    meal_distribution = state.get("meal_distribution")
+    if meal_distribution is None:
         raise ValueError("meal_distribution is required")
-    if state.user_profile is None:
+    user_profile = state.get("user_profile")
+    if user_profile is None:
         raise ValueError("user_profile is required")
-    if state.nutritional_targets is None:
+    nutritional_targets = state.get("nutritional_targets")
+    if nutritional_targets is None:
         raise ValueError("nutritional_targets is required")
 
-    meal_time_to_change = state.selected_meal_to_change
-    meal_times = list(state.meal_distribution.keys())
+    meal_time_to_change = selected_meal_to_change
+    meal_times = list(meal_distribution.keys())
     total_meals = len(meal_times)
 
     # Find the index of the meal to change
@@ -188,21 +192,22 @@ async def recipe_generation_single(state: NutritionAgentState) -> dict[str, Any]
         ) from e
 
     # Get target calories for this meal
-    target_calories = state.meal_distribution[meal_time_to_change]
+    target_calories = meal_distribution[meal_time_to_change]
 
     # Generate new meal with user feedback
+    user_feedback = state.get("user_feedback")
     new_meal, error = await _generate_single_meal_with_feedback(
         meal_time=meal_time_to_change,
         target_calories=target_calories,
-        user_profile=state.user_profile,
-        nutritional_targets=state.nutritional_targets,
+        user_profile=user_profile,
+        nutritional_targets=nutritional_targets,
         total_meals=total_meals,
         current_meal_number=meal_index + 1,
-        user_feedback=state.user_feedback,
+        user_feedback=user_feedback,
     )
 
     # Update daily_meals list
-    updated_meals = list(state.daily_meals)  # Copy
+    updated_meals = list(state.get("daily_meals", []))  # Copy
     if new_meal is not None:
         # Find and replace the meal in the list
         for i, meal in enumerate(updated_meals):
@@ -214,7 +219,7 @@ async def recipe_generation_single(state: NutritionAgentState) -> dict[str, Any]
             updated_meals.append(new_meal)
 
     # Update errors
-    updated_errors = dict(state.meal_generation_errors)  # Copy
+    updated_errors = dict(state.get("meal_generation_errors", {}))  # Copy
     if error:
         updated_errors[meal_time_to_change] = error
     elif meal_time_to_change in updated_errors:

@@ -42,17 +42,20 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         - validation_errors: List of error messages (empty if valid)
         - final_diet_plan: DietPlan if valid, None otherwise
     """
-    if state.daily_meals is None or len(state.daily_meals) == 0:
+    daily_meals = state.get("daily_meals", [])
+    if not daily_meals:
         return {
             "validation_errors": ["No meals to validate"],
             "final_diet_plan": None,
         }
-    if state.nutritional_targets is None:
+    nutritional_targets = state.get("nutritional_targets")
+    if nutritional_targets is None:
         return {
             "validation_errors": ["Missing nutritional targets"],
             "final_diet_plan": None,
         }
-    if state.user_profile is None:
+    user_profile = state.get("user_profile")
+    if user_profile is None:
         return {
             "validation_errors": ["Missing user profile"],
             "final_diet_plan": None,
@@ -61,8 +64,8 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
     validation_errors: list[str] = []
 
     # 1. Calculate total calories from all meals
-    total_calories = sum(meal.total_calories for meal in state.daily_meals)
-    target_calories = state.nutritional_targets.target_calories
+    total_calories = sum(meal.total_calories for meal in daily_meals)
+    target_calories = nutritional_targets.target_calories
 
     # 2. Check calorie tolerance
     error_pct = abs(total_calories - target_calories) / target_calories
@@ -73,8 +76,8 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         )
 
     # 3. Check meal count matches expected
-    expected_meals = state.user_profile.number_of_meals
-    actual_meals = len(state.daily_meals)
+    expected_meals = user_profile.number_of_meals
+    actual_meals = len(daily_meals)
     if actual_meals != expected_meals:
         validation_errors.append(
             f"Expected {expected_meals} meals but got {actual_meals}"
@@ -89,7 +92,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
 
     # 4. Consolidate shopping list from all meals
     all_ingredients: list[str] = []
-    for meal in state.daily_meals:
+    for meal in daily_meals:
         all_ingredients.extend(meal.ingredients)
 
     shopping_list_raw = consolidate_shopping_list.invoke(
@@ -102,26 +105,26 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
     # 5. Build final DietPlan
     diet_type_label = (
         "Cetogénica"
-        if state.user_profile.diet_type.value == "keto"
+        if user_profile.diet_type.value == "keto"
         else "Alta en Proteína"
-        if state.user_profile.objective.value in ["muscle_gain", "fat_loss"]
+        if user_profile.objective.value in ["muscle_gain", "fat_loss"]
         else "Balanceada"
     )
 
     macronutrients = Macronutrients(
-        protein_percentage=state.nutritional_targets.protein_percentage,
-        protein_grams=state.nutritional_targets.protein_grams,
-        carbs_percentage=state.nutritional_targets.carbs_percentage,
-        carbs_grams=state.nutritional_targets.carbs_grams,
-        fat_percentage=state.nutritional_targets.fat_percentage,
-        fat_grams=state.nutritional_targets.fat_grams,
+        protein_percentage=nutritional_targets.protein_percentage,
+        protein_grams=nutritional_targets.protein_grams,
+        carbs_percentage=nutritional_targets.carbs_percentage,
+        carbs_grams=nutritional_targets.carbs_grams,
+        fat_percentage=nutritional_targets.fat_percentage,
+        fat_grams=nutritional_targets.fat_grams,
     )
 
     final_diet_plan = DietPlan(
         diet_type=diet_type_label,
         total_calories=total_calories,
         macronutrients=macronutrients,
-        daily_meals=list(state.daily_meals),
+        daily_meals=list(daily_meals),
         shopping_list=shopping_list,
         day_identifier=1,  # Single day plan
     )
