@@ -143,8 +143,19 @@ Date: 2026-01-24
 **Phase 4 Complete**
 
 ## Phase 5: Graph Assembly
-- [ ] Implement graph.py with StateGraph, nodes, and conditional edges
-- [ ] Export graph from __init__.py
+- [x] Implement graph.py with StateGraph, nodes, and conditional edges
+  - 6 nodes: data_collection, calculation, recipe_generation_batch,
+    recipe_generation_single, meal_review_batch, validation
+  - 3 routing functions: route_after_data_collection, route_after_meal_review_batch,
+    route_after_validation
+  - Entry point: data_collection
+  - Conditional edges for HITL flow control
+  Date: 2026-01-25
+- [x] Export graph from __init__.py
+  - Updated __init__.py with docstring and graph export
+  Date: 2026-01-25
+
+**Phase 5 Complete**
 
 ## Phase 6: API Integration
 - [ ] Register nutrition_agent in src/api/main.py
