@@ -13,3 +13,6 @@ wheels/
 #Langgraph studio
 .langgraph_api
 *.pckl
+
+spec/
+spec/*.md
