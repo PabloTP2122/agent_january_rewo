@@ -121,7 +121,12 @@ Date: 2026-01-24
   - Returns updated daily_meals + resets review_decision to None
   - Clears selected_meal_to_change and user_feedback after use
   Date: 2026-01-24
-- [ ] Implement nodes/meal_review_batch.py (HITL with interrupt())
+- [x] Implement nodes/meal_review_batch.py (HITL with interrupt())
+  - Uses langgraph.types.interrupt() for HITL pause
+  - Sends complete meal plan in interrupt payload
+  - User options: approve, change_meal, regenerate_all
+  - Returns review_decision, selected_meal_to_change, user_feedback
+  Date: 2026-01-24
 - [ ] Implement nodes/validation.py (deterministic)
 - [ ] Update nodes/__init__.py
 
