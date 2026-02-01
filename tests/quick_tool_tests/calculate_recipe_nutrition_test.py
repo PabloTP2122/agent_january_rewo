@@ -39,7 +39,7 @@ test_input = {
     "ingredientes": [
         {"nombre": "Platano maduro", "peso_gramos": 100},  # 137.0
         {"nombre": "Pechuga de Pollo", "peso_gramos": 200},  # 286.0
-        {"nombre": "Arroz blanco cocido", "peso_gramos": 150},  # 159.0
+        {"nombre": "Arroz blanco cocido (sancochado)", "peso_gramos": 150},  # 159.0
         {"nombre": "Unicornio enlatado", "peso_gramos": 200},  # Caso borde
     ]
 }
