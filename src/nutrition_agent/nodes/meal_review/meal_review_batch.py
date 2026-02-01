@@ -15,6 +15,7 @@ from typing import Any
 
 from langgraph.types import interrupt
 
+from src.nutrition_agent.models import Meal, NutritionalTargets
 from src.nutrition_agent.state import NutritionAgentState
 
 
@@ -38,8 +39,17 @@ def meal_review_batch(state: NutritionAgentState) -> dict[str, Any]:
         - user_feedback: feedback text if change_meal, else None
     """
     # Get state values using dict access
-    daily_meals = state.get("daily_meals", [])
-    nutritional_targets = state.get("nutritional_targets")
+    # Handle LangGraph serialization: Pydantic models become dicts after checkpointing
+    daily_meals_data = state.get("daily_meals", [])
+    daily_meals = [Meal(**m) if isinstance(m, dict) else m for m in daily_meals_data]
+
+    nutritional_targets_data = state.get("nutritional_targets")
+    nutritional_targets = (
+        NutritionalTargets(**nutritional_targets_data)
+        if isinstance(nutritional_targets_data, dict) and nutritional_targets_data
+        else nutritional_targets_data
+    )
+
     meal_generation_errors = state.get("meal_generation_errors", {})
 
     # Build interrupt payload with all relevant information

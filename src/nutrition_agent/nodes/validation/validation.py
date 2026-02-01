@@ -15,10 +15,14 @@ from typing import Any
 from src.nutrition_agent.models import (
     DietPlan,
     Macronutrients,
+    Meal,
+    NutritionalTargets,
     ShoppingListItem,
+    UserProfile,
 )
 from src.nutrition_agent.state import NutritionAgentState
-from src.shared import consolidate_shopping_list
+
+from .tools import consolidate_shopping_list
 
 # Tolerance for calorie validation
 CALORIE_TOLERANCE = 0.05  # ±5%
@@ -42,24 +46,38 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         - validation_errors: List of error messages (empty if valid)
         - final_diet_plan: DietPlan if valid, None otherwise
     """
-    daily_meals = state.get("daily_meals", [])
-    if not daily_meals:
+    # Handle LangGraph serialization: Pydantic models become dicts after checkpointing
+    daily_meals_data = state.get("daily_meals", [])
+    if not daily_meals_data:
         return {
             "validation_errors": ["No meals to validate"],
             "final_diet_plan": None,
         }
-    nutritional_targets = state.get("nutritional_targets")
-    if nutritional_targets is None:
+    daily_meals = [Meal(**m) if isinstance(m, dict) else m for m in daily_meals_data]
+
+    nutritional_targets_data = state.get("nutritional_targets")
+    if nutritional_targets_data is None:
         return {
             "validation_errors": ["Missing nutritional targets"],
             "final_diet_plan": None,
         }
-    user_profile = state.get("user_profile")
-    if user_profile is None:
+    nutritional_targets = (
+        NutritionalTargets(**nutritional_targets_data)
+        if isinstance(nutritional_targets_data, dict)
+        else nutritional_targets_data
+    )
+
+    user_profile_data = state.get("user_profile")
+    if user_profile_data is None:
         return {
             "validation_errors": ["Missing user profile"],
             "final_diet_plan": None,
         }
+    user_profile = (
+        UserProfile(**user_profile_data)
+        if isinstance(user_profile_data, dict)
+        else user_profile_data
+    )
 
     validation_errors: list[str] = []
 

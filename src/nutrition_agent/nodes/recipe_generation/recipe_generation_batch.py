@@ -18,6 +18,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from dotenv import load_dotenv
+
 from src.nutrition_agent.models import Meal, NutritionalTargets, UserProfile
 from src.nutrition_agent.prompts import (
     LAST_MEAL_INSTRUCTION,
@@ -25,7 +27,10 @@ from src.nutrition_agent.prompts import (
     REGULAR_MEAL_INSTRUCTION,
 )
 from src.nutrition_agent.state import NutritionAgentState
-from src.shared import calculate_recipe_nutrition, get_llm
+from src.shared import get_llm
+
+load_dotenv()
+from .tool import calculate_recipe_nutrition  # noqa
 
 # Constants for pre-validation
 MAX_ATTEMPTS = 3
@@ -187,12 +192,25 @@ async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:
     meal_distribution = state.get("meal_distribution")
     if meal_distribution is None:
         raise ValueError("meal_distribution is required for recipe generation")
-    user_profile = state.get("user_profile")
-    if user_profile is None:
+
+    # Handle LangGraph serialization: Pydantic models become dicts after checkpointing
+    user_profile_data = state.get("user_profile")
+    if user_profile_data is None:
         raise ValueError("user_profile is required for recipe generation")
-    nutritional_targets = state.get("nutritional_targets")
-    if nutritional_targets is None:
+    user_profile = (
+        UserProfile(**user_profile_data)
+        if isinstance(user_profile_data, dict)
+        else user_profile_data
+    )
+
+    nutritional_targets_data = state.get("nutritional_targets")
+    if nutritional_targets_data is None:
         raise ValueError("nutritional_targets is required for recipe generation")
+    nutritional_targets = (
+        NutritionalTargets(**nutritional_targets_data)
+        if isinstance(nutritional_targets_data, dict)
+        else nutritional_targets_data
+    )
 
     meal_times = list(meal_distribution.keys())
     total_meals = len(meal_times)

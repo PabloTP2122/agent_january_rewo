@@ -10,9 +10,10 @@ Uses shared tools: generate_nutritional_plan, get_meal_distribution
 
 from typing import Any
 
-from src.nutrition_agent.models import NutritionalTargets
+from src.nutrition_agent.models import NutritionalTargets, UserProfile
 from src.nutrition_agent.state import NutritionAgentState
-from src.shared import generate_nutritional_plan, get_meal_distribution
+
+from .tools import generate_nutritional_plan, get_meal_distribution
 
 
 def calculation(state: NutritionAgentState) -> dict[str, Any]:
@@ -29,9 +30,15 @@ def calculation(state: NutritionAgentState) -> dict[str, Any]:
         - nutritional_targets: NutritionalTargets model
         - meal_distribution: dict mapping meal names to calories
     """
-    profile = state.get("user_profile")
-    if profile is None:
+    profile_data = state.get("user_profile")
+    if profile_data is None:
         raise ValueError("user_profile is required for calculation")
+
+    # Handle dict from LangGraph state serialization
+    if isinstance(profile_data, dict):
+        profile = UserProfile(**profile_data)
+    else:
+        profile = profile_data
 
     # 1. Calculate BMR, TDEE, target calories, and macros using shared tool
     plan_result: dict[str, Any] = generate_nutritional_plan.invoke(

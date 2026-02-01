@@ -21,7 +21,7 @@ Extract a complete UserProfile with these fields:
 
 Instructions:
 1. If the user hasn't provided all required fields, ask for the missing
-   ones conversationally
+   ones conversationally. #Always mantain user communication in Spanish.
 2. Validate numeric ranges before accepting values
 3. Return UserProfile ONLY when ALL required fields are collected
 4. Be friendly and conversational, don't ask for all fields at once
@@ -31,4 +31,5 @@ Current conversation context will be provided in the messages.
 Required fields: age, gender, weight, height, activity_level, objective
 Optional fields: diet_type (default: normal), excluded_foods (default: []),
 number_of_meals (default: 3)
+
 """

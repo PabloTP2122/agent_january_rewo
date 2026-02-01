@@ -8,12 +8,18 @@ Node 4: meal_review_batch - HITL batch review
 Node 5: validation - Final calorie verification and DietPlan assembly
 """
 
-from src.nutrition_agent.nodes.calculation import calculation
-from src.nutrition_agent.nodes.data_collection import data_collection
-from src.nutrition_agent.nodes.meal_review_batch import meal_review_batch
-from src.nutrition_agent.nodes.recipe_generation_batch import recipe_generation_batch
-from src.nutrition_agent.nodes.recipe_generation_single import recipe_generation_single
-from src.nutrition_agent.nodes.validation import validation
+from src.nutrition_agent.nodes.calculation.calculation import calculation
+from src.nutrition_agent.nodes.data_collection.data_collection import data_collection
+from src.nutrition_agent.nodes.meal_review.meal_review_batch import (
+    meal_review_batch,
+)
+from src.nutrition_agent.nodes.recipe_generation.recipe_generation_batch import (
+    recipe_generation_batch,
+)
+from src.nutrition_agent.nodes.recipe_generation.recipe_generation_single import (
+    recipe_generation_single,
+)
+from src.nutrition_agent.nodes.validation.validation import validation
 
 __all__ = [
     "data_collection",

@@ -27,6 +27,7 @@ Graph Flow:
                END
 """
 
+from dotenv import load_dotenv
 from langgraph.graph import END, StateGraph
 
 from src.nutrition_agent.nodes import (
@@ -38,6 +39,8 @@ from src.nutrition_agent.nodes import (
     validation,
 )
 from src.nutrition_agent.state import NutritionAgentState
+
+load_dotenv()
 
 
 def route_after_data_collection(state: NutritionAgentState) -> str:
