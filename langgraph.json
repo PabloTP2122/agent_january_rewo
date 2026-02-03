@@ -4,7 +4,8 @@
     "."
   ],
   "graphs": {
-    "simple_agent": "./src/agent/agent.py:graph"
+    "simple_agent": "./src/agent/agent.py:graph",
+    "nutrition_agent": "./src/nutrition_agent/graph.py:graph"
   },
   "env": ".env"
 }
