@@ -1,50 +1,61 @@
-from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
-from copilotkit.integrations.fastapi import add_fastapi_endpoint
+import uvicorn
+from ag_ui_langgraph import add_langgraph_fastapi_endpoint
+from copilotkit import LangGraphAGUIAgent
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-from agent.agent import graph
-from database.session import CheckpointerDep, lifespan
+from nutrition_agent import graph as nutrition_graph
 
 load_dotenv()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-sdk = CopilotKitRemoteEndpoint(
+# Definición del SDK con Agentes AG-UI
+""" sdk = CopilotKitRemoteEndpoint(
     agents=[
         LangGraphAGUIAgent(
             name="simple_agent",
-            description="Agente UI simple",
-            graph=graph,
-        )
+            description="Agente verificador de conexión",
+            graph=simple_graph,
+        ),
+        LangGraphAGUIAgent(
+            name="nutrition_agent",
+            description="Agente de planificación nutricional personalizada",
+            graph=nutrition_graph,
+        ),
     ]
+) """
+add_langgraph_fastapi_endpoint(
+    app=app,
+    agent=LangGraphAGUIAgent(
+        name="nutrition_agent",
+        description="Agente de planificación nutricional personalizada",
+        graph=nutrition_graph,
+    ),
+    path="/",
 )
 
-add_fastapi_endpoint(app, sdk, "/copilotkit")
+
+# uv run fastapi dev src/api/main.py --port 8123
+# uv run uvicorn src.api.main:app --port 8123 --reload
+def main() -> None:
+    """Run the uvicorn server."""
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",  # noqa: S104
+        port="8123",
+        reload=True,
+    )
 
 
-@app.get("/health")  # type: ignore [misc]
-def health() -> dict:
-    """Health check."""
-    return {"status": "ok"}
-
-
-class Message(BaseModel):
-    message: str
-
-
-@app.post("/chat_memory/{chat_id}")  # type: ignore [misc]
-async def chat_simple_memory(
-    chat_id: str, item: Message, checkpointer: CheckpointerDep
-) -> str:
-    return "Not implemented endpoint"
+if __name__ == "__main__":
+    main()
