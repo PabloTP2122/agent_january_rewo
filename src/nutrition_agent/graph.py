@@ -27,6 +27,8 @@ Graph Flow:
                END
 """
 
+import os
+
 from dotenv import load_dotenv
 from langgraph.graph import END, StateGraph
 
@@ -125,5 +127,14 @@ builder.add_conditional_edges(
     {"recipe_generation_batch": "recipe_generation_batch", END: END},
 )
 
+# Conditionally use a checkpointer based on the environment
+# Check for multiple indicators that we're running in LangGraph dev/API mode
+is_fast_api = os.environ.get("LANGGRAPH_FAST_API", "false").lower() == "true"
 # Compile the graph
-graph = builder.compile()
+if is_fast_api:
+    # For CopilotKit and other contexts, use MemorySaver
+    from langgraph.checkpoint.memory import MemorySaver
+
+    graph = builder.compile(checkpointer=MemorySaver())
+else:
+    graph = builder.compile()
