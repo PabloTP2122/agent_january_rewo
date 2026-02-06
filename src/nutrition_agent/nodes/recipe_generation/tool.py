@@ -1,7 +1,11 @@
 import asyncio
+import difflib
+import operator
 import os
+import re
 from typing import Any
 
+from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig, RunnableSerializable
 from langchain_core.tools import tool
@@ -56,7 +60,7 @@ class ResourceLoader:
             vector_store = PineconeVectorStore.from_existing_index(
                 index_name=index_name, embedding=embeddings
             )
-            return vector_store.as_retriever(search_kwargs={"k": 1})
+            return vector_store.as_retriever(search_kwargs={"k": 5})
 
         except Exception as e:
             raise ConnectionError(  # noqa: B904
@@ -102,6 +106,39 @@ _MAX_RETRIES = 3
 _BASE_DELAY = 0.5
 
 
+_FOOD_NAME_RE = re.compile(r"Alimentos\s*\(por 100 gramos\):\s*(.+)", re.IGNORECASE)
+
+
+def _select_best_doc(query_name: str, docs: list[Document]) -> Document:
+    """Pick the doc whose food name is closest to `query_name`.
+
+    Parses the 'Alimentos (por 100 gramos): ...' line from each doc's
+    page_content, then uses SequenceMatcher to find the best string match.
+
+    Returns the best-matching doc, or docs[0] as fallback.
+    """
+    doc_ratios: list[tuple[int, float]] = []
+
+    for i, doc in enumerate(docs):
+        match = _FOOD_NAME_RE.search(doc.page_content)
+
+        if not isinstance(match, re.Match):
+            continue
+
+        ratio: float = difflib.SequenceMatcher(
+            None,
+            match.group(1).strip().lower(),
+            query_name.lower(),
+        ).ratio()
+
+        doc_ratios.append((i, ratio))
+    if not doc_ratios:
+        return docs[0]
+    highest_ratio_tuple = max(doc_ratios, key=operator.itemgetter(1))
+    highest_doc_index = highest_ratio_tuple[0]
+    return docs[highest_doc_index]
+
+
 async def _process_ingredient_task(ing: IngredientInput) -> ProcessedItem:
     """Atomic work unit for an ingredient with retry and concurrency control."""
     last_error: Exception | None = None
@@ -123,9 +160,12 @@ async def _process_ingredient_task(ing: IngredientInput) -> ProcessedItem:
                     notes="Not found in Knowledge Base.",
                 )
 
+            # Select best-matching doc from k=5 candidates
+            best_doc = _select_best_doc(ing.nombre, docs)
+
             # 2. Extraction
             raw_data = await extractor.ainvoke(
-                {"ingredient_name": ing.nombre, "context": docs[0].page_content}
+                {"ingredient_name": ing.nombre, "context": best_doc.page_content}
             )
 
             # 3. Calculation
