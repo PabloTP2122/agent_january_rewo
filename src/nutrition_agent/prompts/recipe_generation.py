@@ -42,7 +42,7 @@ IMPORTANT:
 - If total calories don't match target (±5%), you'll be asked to regenerate
   with adjusted portions
 - Use realistic portion sizes for accuracy (e.g., "pollo 150g" not "pollo 500g")
-- Use PRECISE ingredient names (e.g. "Platano maduro" not "platano")
+- Use PRECISE ingredient names (e.g., "Platano maduro" not "platano")
 - Do NOT include any foods from the excluded list: {excluded_foods}
 - Keep the meal appropriate for {diet_type} diet
 - Use metric units (grams, ml) for all quantities
