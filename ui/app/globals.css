@@ -1,10 +1,8 @@
 @import "tailwindcss";
-/* Importa los estilos base de CopilotKit */
-@import "@copilotkit/react-ui/styles.css";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --copilot-kit-primary-color: #3bf667;
 }
 
 @theme inline {

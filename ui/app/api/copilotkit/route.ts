@@ -1,24 +1,25 @@
 import {
   CopilotRuntime,
-  OpenAIAdapter,
+  ExperimentalEmptyAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
+import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
 import { NextRequest } from "next/server";
 
+const serviceAdapter = new ExperimentalEmptyAdapter();
 
 const runtime = new CopilotRuntime({
-  // En v1.50+, usa remoteEndpoints en lugar de un ServiceAdapter para agentes.
-  remoteEndpoints: [
-    {
-      url: process.env.REMOTE_ACTION_URL || "http://127.0.0.1:8000/copilotkit",
-    },
-  ],
+  agents: {
+    nutrition_agent: new LangGraphHttpAgent({
+      url: process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123",
+    }),
+  }
 });
 
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    serviceAdapter: new OpenAIAdapter(),
+    serviceAdapter,
     endpoint: "/api/copilotkit",
   });
 
