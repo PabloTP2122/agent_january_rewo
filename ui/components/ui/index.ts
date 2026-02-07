@@ -23,5 +23,14 @@ export type { SpinnerProps } from "./Spinner";
 export { ProgressBar } from "./ProgressBar";
 export type { ProgressBarProps } from "./ProgressBar";
 
-export { Skeleton, SkeletonText, SkeletonCard } from "./Skeleton";
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  SkeletonMealCard,
+  SkeletonMacrosTable,
+  SkeletonDietInfoHeader,
+  SkeletonShoppingList,
+  SkeletonDietPlanCanvas,
+} from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";

@@ -1,0 +1,272 @@
+/**
+ * CopilotKit Theme Overrides
+ *
+ * Custom styling for CopilotKit components to match the nutrition agent design system.
+ * Import this file in globals.css or layout.tsx after CopilotKit styles.
+ */
+
+/* =============================================================================
+   CSS CUSTOM PROPERTIES - Brand Colors
+   ============================================================================= */
+
+:root {
+  /* Primary - Green (matching diet type badge) */
+  --copilotkit-primary: #22c55e; /* green-500 */
+  --copilotkit-primary-hover: #16a34a; /* green-600 */
+  --copilotkit-primary-light: #dcfce7; /* green-100 */
+
+  /* Secondary - Purple (matching calories badge) */
+  --copilotkit-secondary: #9333ea; /* purple-600 */
+  --copilotkit-secondary-hover: #7e22ce; /* purple-700 */
+  --copilotkit-secondary-light: #f3e8ff; /* purple-100 */
+
+  /* Neutral */
+  --copilotkit-background: #ffffff;
+  --copilotkit-surface: #f9fafb; /* gray-50 */
+  --copilotkit-border: #e5e7eb; /* gray-200 */
+  --copilotkit-text-primary: #1f2937; /* gray-800 */
+  --copilotkit-text-secondary: #6b7280; /* gray-500 */
+
+  /* Status */
+  --copilotkit-success: #22c55e;
+  --copilotkit-warning: #eab308;
+  --copilotkit-error: #ef4444;
+  --copilotkit-info: #3b82f6;
+}
+
+/* =============================================================================
+   COPILOTKIT SIDEBAR CONTAINER
+   ============================================================================= */
+
+/* Sidebar wrapper */
+[data-copilotkit-sidebar] {
+  font-family: inherit !important;
+  background-color: var(--copilotkit-background) !important;
+  border-left: 1px solid var(--copilotkit-border) !important;
+}
+
+/* Sidebar header */
+[data-copilotkit-sidebar] header,
+[data-copilotkit-header] {
+  background-color: var(--copilotkit-background) !important;
+  border-bottom: 1px solid var(--copilotkit-border) !important;
+  padding: 1rem !important;
+}
+
+/* Sidebar title */
+[data-copilotkit-sidebar] h1,
+[data-copilotkit-sidebar] h2,
+[data-copilotkit-title] {
+  color: var(--copilotkit-text-primary) !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+}
+
+/* =============================================================================
+   MESSAGE BUBBLES
+   ============================================================================= */
+
+/* User message bubble */
+[data-copilotkit-user-message],
+.copilotkit-user-message {
+  background-color: var(--copilotkit-primary) !important;
+  color: white !important;
+  border-radius: 1rem 1rem 0.25rem 1rem !important;
+  padding: 0.75rem 1rem !important;
+  max-width: 85% !important;
+  margin-left: auto !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Assistant message bubble */
+[data-copilotkit-assistant-message],
+.copilotkit-assistant-message {
+  background-color: var(--copilotkit-surface) !important;
+  color: var(--copilotkit-text-primary) !important;
+  border-radius: 1rem 1rem 1rem 0.25rem !important;
+  padding: 0.75rem 1rem !important;
+  max-width: 85% !important;
+  margin-right: auto !important;
+  border: 1px solid var(--copilotkit-border) !important;
+}
+
+/* Message text */
+[data-copilotkit-message] p {
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* =============================================================================
+   INPUT AREA
+   ============================================================================= */
+
+/* Input container */
+[data-copilotkit-input-container],
+.copilotkit-input-container {
+  padding: 1rem !important;
+  border-top: 1px solid var(--copilotkit-border) !important;
+  background-color: var(--copilotkit-background) !important;
+}
+
+/* Text input */
+[data-copilotkit-input],
+.copilotkit-input {
+  border: 1px solid var(--copilotkit-border) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+  background-color: white !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+[data-copilotkit-input]:focus,
+.copilotkit-input:focus {
+  outline: none !important;
+  border-color: var(--copilotkit-primary) !important;
+  box-shadow: 0 0 0 3px var(--copilotkit-primary-light) !important;
+}
+
+/* Send button */
+[data-copilotkit-send-button],
+.copilotkit-send-button {
+  background-color: var(--copilotkit-primary) !important;
+  color: white !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1.25rem !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s, transform 0.1s !important;
+}
+
+[data-copilotkit-send-button]:hover,
+.copilotkit-send-button:hover {
+  background-color: var(--copilotkit-primary-hover) !important;
+}
+
+[data-copilotkit-send-button]:active,
+.copilotkit-send-button:active {
+  transform: scale(0.98) !important;
+}
+
+[data-copilotkit-send-button]:disabled,
+.copilotkit-send-button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* =============================================================================
+   LOADING & STATUS INDICATORS
+   ============================================================================= */
+
+/* Typing indicator */
+[data-copilotkit-typing-indicator],
+.copilotkit-typing-indicator {
+  color: var(--copilotkit-text-secondary) !important;
+}
+
+/* Loading spinner */
+[data-copilotkit-loading],
+.copilotkit-loading {
+  border-color: var(--copilotkit-primary-light) !important;
+  border-top-color: var(--copilotkit-primary) !important;
+}
+
+/* Status messages */
+[data-copilotkit-status] {
+  font-size: 0.75rem !important;
+  color: var(--copilotkit-text-secondary) !important;
+  padding: 0.5rem !important;
+  text-align: center !important;
+}
+
+/* =============================================================================
+   ACTIONS & SUGGESTIONS
+   ============================================================================= */
+
+/* Suggestion chips */
+[data-copilotkit-suggestion],
+.copilotkit-suggestion {
+  background-color: var(--copilotkit-surface) !important;
+  border: 1px solid var(--copilotkit-border) !important;
+  border-radius: 9999px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.875rem !important;
+  color: var(--copilotkit-text-primary) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+[data-copilotkit-suggestion]:hover,
+.copilotkit-suggestion:hover {
+  background-color: var(--copilotkit-primary-light) !important;
+  border-color: var(--copilotkit-primary) !important;
+  color: var(--copilotkit-primary) !important;
+}
+
+/* =============================================================================
+   SCROLLBAR STYLING
+   ============================================================================= */
+
+[data-copilotkit-messages]::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-copilotkit-messages]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-copilotkit-messages]::-webkit-scrollbar-thumb {
+  background-color: var(--copilotkit-border);
+  border-radius: 3px;
+}
+
+[data-copilotkit-messages]::-webkit-scrollbar-thumb:hover {
+  background-color: var(--copilotkit-text-secondary);
+}
+
+/* =============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  [data-copilotkit-user-message],
+  [data-copilotkit-assistant-message] {
+    max-width: 90% !important;
+  }
+
+  [data-copilotkit-input] {
+    font-size: 1rem !important; /* Prevent zoom on iOS */
+  }
+}
+
+/* =============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================= */
+
+/* Focus visible for keyboard navigation */
+[data-copilotkit-send-button]:focus-visible,
+[data-copilotkit-suggestion]:focus-visible,
+[data-copilotkit-input]:focus-visible {
+  outline: 2px solid var(--copilotkit-primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-copilotkit-sidebar] *,
+  .copilotkit-loading {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  [data-copilotkit-user-message] {
+    border: 2px solid white !important;
+  }
+
+  [data-copilotkit-assistant-message] {
+    border: 2px solid var(--copilotkit-text-primary) !important;
+  }
+}

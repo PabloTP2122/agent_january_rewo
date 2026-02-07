@@ -38,12 +38,28 @@ export function DietPlanCanvas({
   }
 
   return (
-    <div className="space-y-6">
+    <main
+      className="space-y-6"
+      role="main"
+      aria-label="Plan nutricional"
+    >
+      {/* Screen reader announcement for plan loaded */}
+      <div className="sr-only" role="status" aria-live="polite">
+        Plan nutricional cargado: {dietPlan.diet_type} con {dietPlan.total_calories} calorías
+        y {dietPlan.daily_meals.length} comidas
+      </div>
+
       {/* Debug Panel */}
       {showDebug && debug && <CanvasDebugPanel debug={debug} />}
 
       {/* Header: Diet Type & Calories */}
-      <div className="bg-white rounded-2xl p-6 shadow-md">
+      <section
+        className="bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-shadow duration-300"
+        aria-labelledby="diet-summary-heading"
+      >
+        <h1 id="diet-summary-heading" className="sr-only">
+          Resumen del plan nutricional
+        </h1>
         <DietInfoHeader
           dietType={dietPlan.diet_type}
           totalCalories={dietPlan.total_calories}
@@ -52,17 +68,26 @@ export function DietPlanCanvas({
           macros={dietPlan.macronutrients}
           totalCalories={dietPlan.total_calories}
         />
-      </div>
+      </section>
 
-      {/* Meals */}
-      {dietPlan.daily_meals.map((meal, index) => (
-        <MealCard key={`${meal.meal_time}-${index}`} meal={meal} />
-      ))}
+      {/* Meals with staggered entrance animation */}
+      <section aria-label="Comidas del día">
+        <h2 className="sr-only">Comidas del día</h2>
+        {dietPlan.daily_meals.map((meal, index) => (
+          <MealCard
+            key={`${meal.meal_time}-${index}`}
+            meal={meal}
+            animationIndex={index + 1}
+          />
+        ))}
+      </section>
 
       {/* Shopping List */}
       {dietPlan.shopping_list.length > 0 && (
-        <ShoppingList items={dietPlan.shopping_list} />
+        <section aria-label="Lista de compras">
+          <ShoppingList items={dietPlan.shopping_list} />
+        </section>
       )}
-    </div>
+    </main>
   );
 }

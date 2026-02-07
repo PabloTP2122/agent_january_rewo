@@ -4,12 +4,27 @@ import type { Meal } from "@/lib/types";
 
 export interface MealCardProps {
   meal: Meal;
+  /** Animation delay index for staggered entrance */
+  animationIndex?: number;
 }
 
-export function MealCard({ meal }: MealCardProps) {
+export function MealCard({ meal, animationIndex = 0 }: MealCardProps) {
+  // Calculate stagger delay based on index (max 5 levels of stagger)
+  const staggerClass = animationIndex > 0 && animationIndex <= 5
+    ? `animate-stagger-${animationIndex}`
+    : "";
+
   return (
-    <section className="bg-white rounded-2xl p-6 pt-12 mt-16 relative shadow-md">
-      <div className="absolute -top-6 -left-6 bg-green-500 text-white font-bold text-xl px-6 py-2 rounded-lg shadow-lg">
+    <section
+      className={`
+        bg-white rounded-2xl p-6 pt-12 mt-16 relative shadow-md
+        animate-fade-slide-up ${staggerClass}
+        hover:shadow-lg transition-shadow duration-300
+      `}
+      aria-label={`Comida: ${meal.title}`}
+    >
+      {/* Meal time badge with animation */}
+      <div className="absolute -top-6 -left-6 bg-green-500 text-white font-bold text-xl px-6 py-2 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-200">
         {meal.meal_time}
       </div>
 
@@ -25,7 +40,9 @@ export function MealCard({ meal }: MealCardProps) {
           <h3 className="text-xl font-semibold mb-2 text-green-600">Ingredientes:</h3>
           <ul className="list-disc list-inside space-y-1 text-gray-700 marker:text-green-500">
             {meal.ingredients.map((ingredient, index) => (
-              <li key={index}>{ingredient}</li>
+              <li key={index} className="hover:text-gray-900 transition-colors">
+                {ingredient}
+              </li>
             ))}
           </ul>
         </div>
@@ -39,7 +56,9 @@ export function MealCard({ meal }: MealCardProps) {
         <h3 className="text-xl font-semibold mb-2 text-green-600">Preparación:</h3>
         <ol className="list-decimal list-inside space-y-2 text-gray-700">
           {meal.preparation.map((step, index) => (
-            <li key={index}>{step}</li>
+            <li key={index} className="hover:text-gray-900 transition-colors">
+              {step}
+            </li>
           ))}
         </ol>
       </div>

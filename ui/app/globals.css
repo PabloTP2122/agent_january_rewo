@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/copilotkit-overrides.css";
 
 :root {
   --background: #ffffff;
@@ -10,6 +11,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Custom animations */
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.5s ease-out forwards;
+  --animate-slide-up: slideUp 0.4s ease-out forwards;
+  --animate-fade-slide-up: fadeSlideUp 0.5s ease-out forwards;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +30,89 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =============================================================================
+   CUSTOM ANIMATIONS - Phase 2 Iteration
+   ============================================================================= */
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Combined fade + slide up */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation utility classes */
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+.animate-fade-slide-up {
+  animation: fadeSlideUp 0.5s ease-out forwards;
+}
+
+/* Staggered animation delays for lists */
+.animate-stagger-1 { animation-delay: 0.1s; opacity: 0; }
+.animate-stagger-2 { animation-delay: 0.2s; opacity: 0; }
+.animate-stagger-3 { animation-delay: 0.3s; opacity: 0; }
+.animate-stagger-4 { animation-delay: 0.4s; opacity: 0; }
+.animate-stagger-5 { animation-delay: 0.5s; opacity: 0; }
+
+/* Mobile view transition */
+.mobile-panel-enter {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Focus visible for accessibility */
+.focus-visible-ring:focus-visible {
+  outline: none;
+  ring: 2px;
+  ring-offset: 2px;
+  ring-color: theme('colors.green.500');
 }

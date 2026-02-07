@@ -1,20 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
+/**
+ * Hook for responsive breakpoint detection using useSyncExternalStore.
+ * This avoids the anti-pattern of calling setState in useEffect.
+ */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", callback);
+      return () => media.removeEventListener("change", callback);
+    },
+    [query]
+  );
 
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    setMatches(media.matches);
-
-    const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
+  const getSnapshot = useCallback(() => {
+    return window.matchMedia(query).matches;
   }, [query]);
 
-  return matches;
+  const getServerSnapshot = useCallback(() => {
+    // Return false on server (SSR)
+    return false;
+  }, []);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export function useIsMobile() {
