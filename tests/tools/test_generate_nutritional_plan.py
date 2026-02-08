@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.shared import generate_nutritional_plan
+from src.nutrition_agent.nodes.calculation.tools import generate_nutritional_plan
 
 
 # 1. Test de Lógica Matemática (Happy Path)
