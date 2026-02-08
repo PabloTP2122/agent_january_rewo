@@ -21,6 +21,101 @@ def sum_total_kcal(kcals_meals: list[float]) -> str:
         return f"Error: {str(e)}. Verify the list contains only numbers."
 
 
+# ---------------------------------------------------------------------------
+# Ingredient parsing helpers
+# ---------------------------------------------------------------------------
+
+# Known units whitelist — prevents "ml" from being split into "m" + item "l"
+_KNOWN_UNITS = r"(?:gramos|kilogramos|kilos|litros|unidades|unidad|gr|kg|ml|g|l)"
+
+# Pattern: a number followed immediately (optionally with spaces) by a known unit
+# Works anywhere in the string — handles both "200g Pollo" and "Avena 80g"
+_QTY_UNIT_RE = re.compile(
+    rf"(?P<qty>\d+(?:\.\d+)?)\s*(?P<unit>{_KNOWN_UNITS})\b",
+    re.IGNORECASE,
+)
+
+# Pattern: fraction like "1/2" followed by a known unit
+_FRAC_UNIT_RE = re.compile(
+    rf"(?P<num>\d+)\s*/\s*(?P<den>\d+)\s*(?P<unit>{_KNOWN_UNITS})\b",
+    re.IGNORECASE,
+)
+
+
+def _normalize_unit(raw_unit: str, qty: float) -> tuple[float, str]:
+    """Normalize unit to base (g / ml / unidad) and scale qty."""
+    u = raw_unit.lower()
+    if u in ("kg", "kilos", "kilogramos"):
+        return qty * 1000, "g"
+    if u in ("gr", "gramos"):
+        return qty, "g"
+    if u == "g":
+        return qty, "g"
+    if u in ("l", "litros"):
+        return qty * 1000, "ml"
+    if u == "ml":
+        return qty, "ml"
+    if u in ("unidad", "unidades"):
+        return qty, "unidad"
+    return qty, u
+
+
+def _clean_item_name(name: str) -> str:
+    """Clean up the item name after quantity extraction."""
+    # Remove empty parentheses left over after extracting qty from inside parens
+    name = re.sub(r"\(\s*\)", "", name)
+    # Remove trailing parenthesized cooking notes like "(al grill, sin piel)"
+    name = re.sub(r"\([^)]*\)\s*$", "", name)
+    # Remove leading/trailing "de "
+    name = re.sub(r"^\s*de\s+", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"\s+de\s*$", "", name, flags=re.IGNORECASE)
+    # Collapse whitespace
+    name = re.sub(r"\s+", " ", name).strip()
+    return name
+
+
+def _parse_ingredient(raw: str) -> tuple[float, str, str]:
+    """Parse an ingredient string into (qty, unit, item_name).
+
+    Tries multiple patterns in priority order:
+    1. qty + known unit anywhere in string (e.g., "Avena 80g" or "200g Pollo")
+    2. Fraction + known unit (e.g., "Limón 1/2 unidad")
+    3. Fallback: no quantity detected
+    """
+    text = raw.strip()
+
+    # Try fraction pattern first (less common, but must be checked before int pattern
+    # eats the numerator)
+    frac_match = _FRAC_UNIT_RE.search(text)
+    if frac_match:
+        num = float(frac_match.group("num"))
+        den = float(frac_match.group("den"))
+        qty = num / den if den != 0 else num
+        raw_unit = frac_match.group("unit")
+        qty, unit = _normalize_unit(raw_unit, qty)
+        item = text[: frac_match.start()] + text[frac_match.end() :]
+        item = _clean_item_name(item)
+        return qty, unit, item.lower()
+
+    # Try numeric qty + known unit
+    qty_match = _QTY_UNIT_RE.search(text)
+    if qty_match:
+        qty = float(qty_match.group("qty"))
+        raw_unit = qty_match.group("unit")
+        qty, unit = _normalize_unit(raw_unit, qty)
+        item = text[: qty_match.start()] + text[qty_match.end() :]
+        item = _clean_item_name(item)
+        return qty, unit, item.lower()
+
+    # Fallback: no parseable quantity
+    return 0.0, "varios", _clean_item_name(text).lower()
+
+
+# ---------------------------------------------------------------------------
+# Tool
+# ---------------------------------------------------------------------------
+
+
 @tool("consolidate_shopping_list", args_schema=ConsolidateInput)  # type: ignore [misc]
 def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
     """
@@ -31,52 +126,32 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
     """
     consolidated: dict[str, float] = {}
 
-    # Regex: (Quantity) (Optional unit) (Optional preposition) (Item name)
-    pattern = r"(?P<qty>\d+(?:\.\d+)?)\s*(?P<unit>[a-zA-Z]+)?\s*(?:de\s+)?(?P<item>.+)"
-
     for raw_item in ingredients_raw:
-        clean_item = raw_item.strip()
-        match = re.search(pattern, clean_item, re.IGNORECASE)
+        qty, unit, item_name = _parse_ingredient(raw_item)
 
-        if match:
-            # Case 1: Successful parse
-            qty = float(match.group("qty"))
-            raw_unit = (match.group("unit") or "unidad").lower().strip()
-            item_name = match.group("item").lower().strip()
+        if not item_name:
+            item_name = raw_item.strip().lower()
 
-            # Common unit normalization
-            unit = raw_unit
-            if raw_unit in ["kg", "kilos", "kilogramos"]:
-                qty *= 1000
-                unit = "g"
-            elif raw_unit in ["gr", "gramos"]:
-                unit = "g"
-            elif raw_unit in ["l", "litros"]:
-                qty *= 1000
-                unit = "ml"
+        # Unique composite key: "pollo (g)" != "pollo (unidad)"
+        key = f"{item_name} ({unit})"
 
-            # Unique composite key: "chicken (g)" != "chicken (unit)"
-            key = f"{item_name} ({unit})"
-
+        if unit == "varios":
+            consolidated[key] = consolidated.get(key, 0.0) + 1.0
+        else:
             consolidated[key] = consolidated.get(key, 0.0) + qty
 
-        else:
-            # Case 2: Fallback (items without clear quantity)
-            key = f"{clean_item.lower()} (varios)"
-            consolidated[key] = consolidated.get(key, 0.0) + 1.0
-
-    # Output generation
+    # Output generation — format: "- Item Name: 200g"
+    # This format is compatible with _parse_shopping_list in validation.py
     final_list = []
     for key, total_qty in consolidated.items():
         try:
             name_part, unit_part = key.rsplit(" (", 1)
             unit_clean = unit_part.replace(")", "")
 
-            # Smart formatting
             if unit_clean == "varios":
                 formatted_item = f"- {name_part.title()}"
             else:
-                formatted_item = f"- {total_qty:.0f}{unit_clean} de {name_part.title()}"
+                formatted_item = f"- {name_part.title()}: {total_qty:.0f}{unit_clean}"
 
             final_list.append(formatted_item)
         except ValueError:
