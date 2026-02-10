@@ -32,23 +32,41 @@ Generate a Meal with the following structure:
 - title: Short descriptive name (5-150 characters)
 - description: Brief overview of the meal (10-500 characters)
 - total_calories: Must be within +/-5% of {target_calories}
-- ingredients: List of ingredients with quantities in grams (e.g., "pollo 150g")
+- ingredients: List of STRUCTURED ingredients, each with:
+  - nombre: Ingredient name in Spanish (e.g., "Pechuga de pollo")
+  - cantidad_display: Human-readable quantity with CORRECT unit:
+    - Solids/meats: use grams (e.g., "200g", "150g")
+    - Liquids (aceite, leche, caldo): use ml (e.g., "15ml", "200ml")
+    - Countable items (huevos, tortillas): use unidades (e.g., "3 unidades", "2 unidades")
+  - peso_gramos: Weight in grams (numeric, for nutritional calculation — always in grams regardless of display unit)
+  - kcal: Kilocalories for THIS ingredient in the specified quantity
 - preparation: Numbered list of cooking steps
 - alternative (optional): A simpler alternative if available
 
+CRITICAL CONSTRAINT - Ingredient kcal consistency:
+The SUM of all ingredient kcal values MUST EQUAL total_calories (±0.5 kcal).
+Example: if total_calories = 350, then ingredient kcals must sum to 350.
+
+Example ingredients format:
+  ingredients: [
+    {{"nombre": "Pechuga de pollo", "cantidad_display": "200g", "peso_gramos": 200.0, "kcal": 330.0}},
+    {{"nombre": "Aceite de oliva", "cantidad_display": "10ml", "peso_gramos": 9.0, "kcal": 80.0}},
+    {{"nombre": "Huevo entero", "cantidad_display": "2 unidades", "peso_gramos": 100.0, "kcal": 143.0}}
+  ]
+  total_calories: 553.0  (330 + 80 + 143 = 553 ✓)
+
 IMPORTANT:
-- Be PRECISE with calorie estimation - ingredients will be cross-checked against
-  a nutritional database via RAG lookup
+- Be PRECISE with per-ingredient kcal - they will be summed and verified
 - If total calories don't match target (±5%), you'll be asked to regenerate
-  with adjusted portions
-- Use realistic portion sizes for accuracy (e.g., "pollo 150g" not "pollo 500g")
+- Use realistic portion sizes (e.g., "pollo 150g" not "pollo 500g")
 - Use PRECISE ingredient names (e.g., "Platano maduro" not "platano")
 - Do NOT include any foods from the excluded list: {excluded_foods}
 - Keep the meal appropriate for {diet_type} diet
 - Use metric units (grams, ml) for all quantities
+- Use CORRECT units in cantidad_display: grams for solids, ml for liquids (aceite, leche, caldo), unidades for countable items (huevos, tortillas)
 - This meal will be generated in parallel with other meals, so focus on hitting
   YOUR target precisely without worrying about other meals
-"""
+"""  # noqa: E501
 
 # Instruction for the LAST meal (stricter tolerance, exact budget)
 LAST_MEAL_INSTRUCTION = """\

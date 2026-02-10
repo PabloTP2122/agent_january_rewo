@@ -89,14 +89,13 @@ export function MealReviewCard({
 
         {expanded && (
           <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-            {/* Ingredients */}
             <div>
               <h5 className="text-sm font-medium text-gray-700 mb-1">Ingredientes:</h5>
               <ul className="text-sm text-gray-600 space-y-0.5">
-                {meal.ingredients.map((ingredient, index) => (
+                {meal.ingredients.map((ing, index) => (
                   <li key={index} className="flex items-start gap-1">
-                    <span className="text-gray-400">•</span>
-                    {ingredient}
+                    {ing.cantidad_display} de {ing.nombre}
+                    <span className="text-gray-500 ml-1">({ing.kcal.toFixed(0)} kcal)</span>
                   </li>
                 ))}
               </ul>

@@ -28,9 +28,9 @@ from src.nutrition_agent.prompts import (
 )
 from src.nutrition_agent.state import NutritionAgentState
 from src.shared import get_llm
+from src.shared.tools import sum_ingredients_kcal
 
 load_dotenv()
-from .tool import calculate_recipe_nutrition  # noqa
 
 # Constants for pre-validation
 MAX_ATTEMPTS = 3
@@ -104,18 +104,18 @@ async def _generate_single_meal_with_validation(
             # 1. Generate meal via LLM
             meal: Meal = await structured_llm.ainvoke(prompt)
 
-            # 2. Validate via RAG (calculate_recipe_nutrition)
-            try:
-                # Parse ingredients to format expected by tool
-                ingredient_inputs = _parse_ingredients_for_rag(meal.ingredients)
-                nutrition_result = await calculate_recipe_nutrition.ainvoke(
-                    {"ingredientes": ingredient_inputs}
-                )
-                actual_kcal = nutrition_result.get(
-                    "total_recipe_kcal", meal.total_calories
-                )
-            except Exception:
-                # Fallback to LLM estimate if RAG fails
+            # 2. Validate ingredient kcal sum vs total_calories
+            ingredient_kcals = [ing.kcal for ing in meal.ingredients]
+            validation_result = sum_ingredients_kcal.invoke(
+                {
+                    "ingredients": ingredient_kcals,
+                    "expected_kcal_sum": meal.total_calories,
+                }
+            )
+
+            if "Correction required" in validation_result:
+                actual_kcal = sum(ingredient_kcals)
+            else:
                 actual_kcal = meal.total_calories
 
             # 3. Check tolerance
@@ -140,38 +140,6 @@ async def _generate_single_meal_with_validation(
         f"Failed after {MAX_ATTEMPTS} attempts. Best error: {best_error * 100:.1f}%"
     )
     return (best_meal, error_msg)
-
-
-def _parse_ingredients_for_rag(ingredients: list[str]) -> list[dict[str, Any]]:
-    """Parse ingredient strings to format expected by calculate_recipe_nutrition.
-
-    Args:
-        ingredients: List of ingredient strings (e.g., "pollo 150g", "arroz 100g")
-
-    Returns:
-        List of dicts with 'nombre' and 'peso_gramos' keys
-    """
-    parsed = []
-    for ing in ingredients:
-        # Try to extract weight from string (e.g., "pollo 150g" or "150g pollo")
-        import re
-
-        # Match patterns like "150g", "150 g", "150gr", "150 gramos"
-        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:g|gr|gramos)", ing.lower())
-        if match:
-            peso = float(match.group(1))
-            # Remove weight from string to get ingredient name
-            nombre = re.sub(r"\d+(?:\.\d+)?\s*(?:g|gr|gramos)", "", ing).strip()
-            nombre = re.sub(r"[()]", "", nombre).strip()  # Remove parentheses
-        else:
-            # Fallback: assume 100g if no weight specified
-            nombre = ing.strip()
-            peso = 100.0
-
-        if nombre:
-            parsed.append({"nombre": nombre, "peso_gramos": peso})
-
-    return parsed
 
 
 async def recipe_generation_batch(state: NutritionAgentState) -> dict[str, Any]:

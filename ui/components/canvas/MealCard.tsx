@@ -39,9 +39,10 @@ export function MealCard({ meal, animationIndex = 0 }: MealCardProps) {
         <div>
           <h3 className="text-xl font-semibold mb-2 text-green-600">Ingredientes:</h3>
           <ul className="list-disc list-inside space-y-1 text-gray-700 marker:text-green-500">
-            {meal.ingredients.map((ingredient, index) => (
+            {meal.ingredients.map((ing, index) => (
               <li key={index} className="hover:text-gray-900 transition-colors">
-                {ingredient}
+                {ing.cantidad_display} de {ing.nombre}
+                <span className="text-gray-500 ml-1">({ing.kcal.toFixed(0)} kcal)</span>
               </li>
             ))}
           </ul>

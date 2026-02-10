@@ -19,11 +19,31 @@ export const MOCK_MEAL_DESAYUNO: Meal = {
     "Omelet de 3 huevos con espinaca, queso bajo en grasa y aguacate fresco",
   total_calories: 450,
   ingredients: [
-    "3 huevos enteros (150g)",
-    "Espinaca fresca (50g)",
-    "Queso bajo en grasa (30g)",
-    "Aguacate (50g)",
-    "Aceite de oliva (5ml)",
+    { "nombre": "huevos enteros", "cantidad_display": "3", "peso_gramos": 150, "kcal": 429 },
+    {
+      "nombre": "espinaca fresca",
+      "cantidad_display": "50g",
+      "peso_gramos": 50,
+      "kcal": 12
+    },
+    {
+      "nombre": "queso bajo en grasa",
+      "cantidad_display": "30g",
+      "peso_gramos": 30,
+      "kcal": 60
+    },
+    {
+      "nombre": "aguacate",
+      "cantidad_display": "50g",
+      "peso_gramos": 50,
+      "kcal": 80
+    },
+    {
+      "nombre": "aceite de oliva",
+      "cantidad_display": "5ml",
+      "peso_gramos": 5,
+      "kcal": 45
+    }
   ],
   preparation: [
     "Batir los huevos en un bowl",
@@ -41,11 +61,36 @@ export const MOCK_MEAL_COMIDA: Meal = {
   description: "Pechuga de pollo al horno con quinoa y vegetales salteados",
   total_calories: 550,
   ingredients: [
-    "Pechuga de pollo (200g)",
-    "Quinoa cocida (150g)",
-    "Brócoli (100g)",
-    "Zanahoria (50g)",
-    "Aceite de oliva (10ml)",
+    {
+      "nombre": "pechuga de pollo",
+      "cantidad_display": "200g",
+      "peso_gramos": 200,
+      "kcal": 330
+    },
+    {
+      "nombre": "quinoa cocida",
+      "cantidad_display": "150g",
+      "peso_gramos": 150,
+      "kcal": 180
+    },
+    {
+      "nombre": "brócoli",
+      "cantidad_display": "100g",
+      "peso_gramos": 100,
+      "kcal": 34
+    },
+    {
+      "nombre": "zanahoria",
+      "cantidad_display": "50g",
+      "peso_gramos": 50,
+      "kcal": 20
+    },
+    {
+      "nombre": "aceite de oliva",
+      "cantidad_display": "10ml",
+      "peso_gramos": 10,
+      "kcal": 90
+    },
   ],
   preparation: [
     "Sazonar la pechuga con sal, pimienta y hierbas",
@@ -63,11 +108,36 @@ export const MOCK_MEAL_CENA: Meal = {
   description: "Ensalada césar con pollo a la plancha y aderezo ligero",
   total_calories: 400,
   ingredients: [
-    "Lechuga romana (150g)",
-    "Pechuga de pollo (150g)",
-    "Queso parmesano (20g)",
-    "Aderezo césar ligero (30ml)",
-    "Crutones integrales (30g)",
+    {
+      "nombre": "lechuga romana",
+      "cantidad_display": "150g",
+      "peso_gramos": 150,
+      "kcal": 25
+    },
+    {
+      "nombre": "pechuga de pollo",
+      "cantidad_display": "150g",
+      "peso_gramos": 150,
+      "kcal": 248
+    },
+    {
+      "nombre": "queso parmesano",
+      "cantidad_display": "20g",
+      "peso_gramos": 20,
+      "kcal": 86
+    },
+    {
+      "nombre": "aderezo césar ligero",
+      "cantidad_display": "30ml",
+      "peso_gramos": 30,
+      "kcal": 90
+    },
+    {
+      "nombre": "crutones integrales",
+      "cantidad_display": "30g",
+      "peso_gramos": 30,
+      "kcal": 120
+    },
   ],
   preparation: [
     "Cortar la lechuga y colocar en un bowl grande",

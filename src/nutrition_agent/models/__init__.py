@@ -7,6 +7,7 @@ diet_plan: final daily recipies structure.
 
 from src.nutrition_agent.models.diet_plan import (
     DietPlan,
+    Ingredient,
     Macronutrients,
     Meal,
     ShoppingListItem,
@@ -17,6 +18,7 @@ from src.nutrition_agent.models.user_profile import UserProfile
 __all__ = [
     "UserProfile",
     "NutritionalTargets",
+    "Ingredient",
     "Meal",
     "Macronutrients",
     "ShoppingListItem",

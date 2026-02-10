@@ -92,6 +92,16 @@ export interface Macronutrients {
 }
 
 /**
+ * Maps to: src/nutrition_agent/models/diet_plan.py - Ingredient
+ */
+export interface Ingredient {
+  nombre: string;
+  cantidad_display: string;
+  peso_gramos: number;
+  kcal: number;
+}
+
+/**
  * Maps to: src/nutrition_agent/models/diet_plan.py - Meal
  */
 export interface Meal {
@@ -99,7 +109,7 @@ export interface Meal {
   title: string;
   description: string;
   total_calories: number;
-  ingredients: string[];
+  ingredients: Ingredient[];
   preparation: string[];
   alternative: string | null;
 }
