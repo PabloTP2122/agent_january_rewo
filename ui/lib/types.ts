@@ -80,6 +80,17 @@ export interface NutritionalTargets {
 }
 
 /**
+ * Maps to: src/nutrition_agent/models/diet_plan.py - MealNotice
+ */
+export type NoticeSeverity = "warning" | "error";
+
+export interface MealNotice {
+  severity: NoticeSeverity;
+  message: string;
+  deviation_pct: number;
+}
+
+/**
  * Maps to: src/nutrition_agent/models/diet_plan.py - Macronutrients
  */
 export interface Macronutrients {
@@ -173,6 +184,8 @@ export interface NutritionAgentState {
 
   // Phase 5: Validation
   validation_errors: string[];
+  validation_retry_count: number;
+  meal_notices: Record<string, MealNotice>;
   final_diet_plan: DietPlan | null;
 }
 
@@ -190,7 +203,7 @@ export interface HITLInterruptPayload {
   type: "meal_plan_review";
   daily_meals: Meal[];
   nutritional_targets: NutritionalTargets | null;
-  meal_generation_errors: Record<string, string>;
+  meal_notices: Record<string, MealNotice>;
   options: HITLOption[];
 }
 

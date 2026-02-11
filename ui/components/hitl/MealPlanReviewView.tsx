@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meal, NutritionalTargets, ReviewDecision } from "@/lib/types";
+import type { Meal, MealNotice, NutritionalTargets, ReviewDecision } from "@/lib/types";
 import { Card, Badge } from "@/components/ui";
 import { MealReviewCard } from "./MealReviewCard";
 import { ReviewActionButtons } from "./ReviewActionButtons";
@@ -8,7 +8,7 @@ import { ReviewActionButtons } from "./ReviewActionButtons";
 export interface MealPlanReviewViewProps {
   meals: Meal[];
   nutritionalTargets: NutritionalTargets | null;
-  errors: Record<string, string>;
+  notices: Record<string, MealNotice>;
   selectedMealTime: string | null;
   feedbackText: string;
   isLoading: boolean;
@@ -20,7 +20,7 @@ export interface MealPlanReviewViewProps {
 export function MealPlanReviewView({
   meals,
   nutritionalTargets,
-  errors,
+  notices,
   selectedMealTime,
   feedbackText,
   isLoading,
@@ -65,21 +65,44 @@ export function MealPlanReviewView({
         </Card>
       )}
 
-      {/* Errors Summary */}
-      {Object.keys(errors).length > 0 && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="font-medium text-amber-800 mb-2">
-            Advertencias en la generacion
-          </h4>
-          <ul className="text-sm text-amber-700 space-y-1">
-            {Object.entries(errors).map(([mealTime, error]) => (
-              <li key={mealTime}>
-                <span className="font-medium">{mealTime}:</span> {error}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Notices Summary */}
+      {(() => {
+        const entries = Object.entries(notices);
+        const errors = entries.filter(([, n]) => n.severity === "error");
+        const warnings = entries.filter(([, n]) => n.severity === "warning");
+        return (
+          <>
+            {errors.length > 0 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <h4 className="font-medium text-red-800 mb-2">
+                  Errores de validacion
+                </h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  {errors.map(([mealTime, notice]) => (
+                    <li key={mealTime}>
+                      <span className="font-medium">{mealTime}:</span> {notice.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {warnings.length > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 className="font-medium text-amber-800 mb-2">
+                  Advertencias
+                </h4>
+                <ul className="text-sm text-amber-700 space-y-1">
+                  {warnings.map(([mealTime, notice]) => (
+                    <li key={mealTime}>
+                      <span className="font-medium">{mealTime}:</span> {notice.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Meal Cards */}
       <div className="space-y-4">
@@ -91,7 +114,7 @@ export function MealPlanReviewView({
               meal={meal}
               isSelected={selectedMealTime === meal.meal_time}
               onSelect={onMealSelect}
-              error={errors[meal.meal_time] || null}
+              notice={notices[meal.meal_time] || null}
             />
           ))}
         </div>

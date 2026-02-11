@@ -7,6 +7,7 @@
 import type {
   DietPlan,
   Meal,
+  MealNotice,
   NutritionAgentState,
   NutritionalTargets,
   UserProfile,
@@ -214,6 +215,8 @@ export const MOCK_AGENT_STATE: Partial<NutritionAgentState> = {
   user_feedback: null,
   selected_meal_to_change: null,
   validation_errors: [],
+  validation_retry_count: 0,
+  meal_notices: {},
   final_diet_plan: MOCK_DIET_PLAN,
 };
 
@@ -229,7 +232,18 @@ export const MOCK_EMPTY_STATE: Partial<NutritionAgentState> = {
   user_feedback: null,
   selected_meal_to_change: null,
   validation_errors: [],
+  validation_retry_count: 0,
+  meal_notices: {},
   final_diet_plan: null,
+};
+
+// Sample notices for HITL testing
+const MOCK_HITL_NOTICES: Record<string, MealNotice> = {
+  Desayuno: {
+    severity: "warning",
+    message: "3.2% por encima del presupuesto (464.4 vs 450.0 kcal)",
+    deviation_pct: 3.2,
+  },
 };
 
 // State for testing HITL review
@@ -248,5 +262,7 @@ export const MOCK_HITL_STATE: Partial<NutritionAgentState> = {
   user_feedback: null,
   selected_meal_to_change: null,
   validation_errors: [],
+  validation_retry_count: 0,
+  meal_notices: MOCK_HITL_NOTICES,
   final_diet_plan: null,
 };

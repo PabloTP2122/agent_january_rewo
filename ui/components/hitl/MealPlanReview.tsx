@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { Meal, NutritionalTargets, ReviewDecision } from "@/lib/types";
+import type { Meal, MealNotice, NutritionalTargets, ReviewDecision } from "@/lib/types";
 import { MealPlanReviewView } from "./MealPlanReviewView";
 
 export interface MealPlanReviewProps {
   meals: Meal[];
   nutritionalTargets: NutritionalTargets | null;
-  errors?: Record<string, string>;
+  notices?: Record<string, MealNotice>;
   onReviewComplete: (decision: ReviewDecision, mealTime?: string, feedback?: string) => void;
   isSubmitting?: boolean;
 }
@@ -15,7 +15,7 @@ export interface MealPlanReviewProps {
 export function MealPlanReview({
   meals,
   nutritionalTargets,
-  errors = {},
+  notices = {},
   onReviewComplete,
   isSubmitting = false,
 }: MealPlanReviewProps) {
@@ -47,7 +47,7 @@ export function MealPlanReview({
     <MealPlanReviewView
       meals={meals}
       nutritionalTargets={nutritionalTargets}
-      errors={errors}
+      notices={notices}
       selectedMealTime={selectedMealTime}
       feedbackText={feedbackText}
       isLoading={isSubmitting}

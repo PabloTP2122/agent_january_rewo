@@ -2,20 +2,20 @@
 
 import { useState } from "react";
 import { Card, Badge, Button } from "@/components/ui";
-import type { Meal } from "@/lib/types";
+import type { Meal, MealNotice } from "@/lib/types";
 
 export interface MealReviewCardProps {
   meal: Meal;
   isSelected?: boolean;
   onSelect?: (mealTime: string) => void;
-  error?: string | null;
+  notice?: MealNotice | null;
 }
 
 export function MealReviewCard({
   meal,
   isSelected = false,
   onSelect,
-  error = null,
+  notice = null,
 }: MealReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -30,7 +30,8 @@ export function MealReviewCard({
       className={`
         transition-all duration-200
         ${isSelected ? "ring-2 ring-blue-500 bg-blue-50" : "hover:shadow-md"}
-        ${error ? "border-amber-300 bg-amber-50" : ""}
+        ${notice?.severity === "error" ? "border-red-300 bg-red-50" : ""}
+        ${notice?.severity === "warning" ? "border-amber-300 bg-amber-50" : ""}
       `}
     >
       {/* Header */}
@@ -43,6 +44,14 @@ export function MealReviewCard({
             <Badge variant="success" size="sm">
               {meal.total_calories.toFixed(0)} kcal
             </Badge>
+            {notice && (
+              <Badge
+                variant={notice.severity === "error" ? "error" : "warning"}
+                size="sm"
+              >
+                {notice.deviation_pct}% off
+              </Badge>
+            )}
           </div>
           <h4 className="font-semibold text-gray-900 truncate">{meal.title}</h4>
           <p className="text-sm text-gray-600 line-clamp-2">{meal.description}</p>
@@ -60,11 +69,26 @@ export function MealReviewCard({
         )}
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <div className="mt-3 p-2 bg-amber-100 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
-            <span className="font-medium">Advertencia:</span> {error}
+      {/* Validation Notice */}
+      {notice && (
+        <div
+          className={`mt-3 p-2 rounded-md ${
+            notice.severity === "error"
+              ? "bg-red-100 border border-red-200"
+              : "bg-amber-100 border border-amber-200"
+          }`}
+        >
+          <p
+            className={`text-sm ${
+              notice.severity === "error" ? "text-red-800" : "text-amber-800"
+            }`}
+          >
+            <span className="font-medium">
+              {notice.severity === "error"
+                ? "Error de validacion:"
+                : "Advertencia:"}
+            </span>{" "}
+            {notice.message}
           </p>
         </div>
       )}
