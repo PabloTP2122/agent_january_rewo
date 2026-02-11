@@ -13,6 +13,7 @@ from nutrition_agent.state import NutritionAgentState
 from src.nutrition_agent.models import (
     Ingredient,
     Meal,
+    MealNotice,
     NutritionalTargets,
     UserProfile,
 )
@@ -119,6 +120,7 @@ class TestValidationPassesWithinTolerance:
         assert result["validation_retry_count"] == 0
         assert result["selected_meal_to_change"] is None
         assert result["user_feedback"] is None
+        assert result["meal_notices"] == {}
 
     def test_within_tolerance(self) -> None:
         """Each meal ~4% off budget (within 5% threshold)."""
@@ -353,3 +355,87 @@ class TestValidationRetryCount:
         assert result["validation_errors"] == []
         assert result["final_diet_plan"] is not None
         assert result["validation_retry_count"] == 0
+
+
+class TestMealNoticesWarning:
+    """Meal 2-5% off budget → warning notice."""
+
+    def test_warning_at_3pct(self) -> None:
+        """Desayuno at 618 kcal vs budget 600 = 3% → severity='warning'."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno Borderline", 618.0),
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena OK", 600.0),
+        ]
+        # Global: 618+800+600 = 2018 vs 2000 = 0.9% → passes global check
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={"Desayuno": 600.0, "Comida": 800.0, "Cena": 600.0},
+        )
+
+        result = validation(state)
+
+        # 3% is within tolerance → validation passes
+        assert result["validation_errors"] == []
+        assert result["final_diet_plan"] is not None
+        # But a warning notice is emitted
+        notices = result["meal_notices"]
+        assert "Desayuno" in notices
+        notice = notices["Desayuno"]
+        assert isinstance(notice, MealNotice)
+        assert notice.severity == "warning"
+        assert notice.deviation_pct == 3.0
+        # Other meals: no notices
+        assert "Comida" not in notices
+        assert "Cena" not in notices
+
+
+class TestMealNoticesError:
+    """Meal >5% off budget → error notice."""
+
+    def test_error_at_14pct(self) -> None:
+        """Cena at 516 kcal vs budget 600 = 14% → severity='error'."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno OK", 600.0),
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena Mala", 516.0),
+        ]
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={"Desayuno": 600.0, "Comida": 800.0, "Cena": 600.0},
+        )
+
+        result = validation(state)
+
+        # Validation fails
+        assert result["final_diet_plan"] is None
+        # Error notice emitted
+        notices = result["meal_notices"]
+        assert "Cena" in notices
+        notice = notices["Cena"]
+        assert isinstance(notice, MealNotice)
+        assert notice.severity == "error"
+        assert notice.deviation_pct == 14.0
+
+
+class TestMealNoticesBelowThreshold:
+    """Meal <2% off budget → no notice."""
+
+    def test_no_notice_at_1pct(self) -> None:
+        """Desayuno at 606 kcal vs budget 600 = 1% → no notice."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno Casi Perfecto", 606.0),
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena OK", 600.0),
+        ]
+        # Global: 606+800+600 = 2006 vs 2000 = 0.3% → passes
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={"Desayuno": 600.0, "Comida": 800.0, "Cena": 600.0},
+        )
+
+        result = validation(state)
+
+        assert result["validation_errors"] == []
+        assert result["final_diet_plan"] is not None
+        assert result["meal_notices"] == {}

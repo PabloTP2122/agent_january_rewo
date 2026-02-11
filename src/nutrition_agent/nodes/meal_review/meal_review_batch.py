@@ -15,7 +15,7 @@ from typing import Any
 
 from langgraph.types import interrupt
 
-from src.nutrition_agent.models import Meal, NutritionalTargets
+from src.nutrition_agent.models import Meal, MealNotice, NutritionalTargets
 from src.nutrition_agent.state import NutritionAgentState
 
 
@@ -50,7 +50,11 @@ def meal_review_batch(state: NutritionAgentState) -> dict[str, Any]:
         else nutritional_targets_data
     )
 
-    meal_generation_errors = state.get("meal_generation_errors", {})
+    # Rehydrate meal_notices (LangGraph serialization: dicts after checkpointing)
+    raw_notices = state.get("meal_notices", {})
+    meal_notices = {
+        k: MealNotice(**v) if isinstance(v, dict) else v for k, v in raw_notices.items()
+    }
 
     # Build interrupt payload with all relevant information
     interrupt_payload = {
@@ -59,7 +63,7 @@ def meal_review_batch(state: NutritionAgentState) -> dict[str, Any]:
         "nutritional_targets": (
             nutritional_targets.model_dump() if nutritional_targets else None
         ),
-        "meal_generation_errors": meal_generation_errors,
+        "meal_notices": {k: v.model_dump() for k, v in meal_notices.items()},
         "options": [
             {"action": "approve", "label": "Approve Entire Plan"},
             {

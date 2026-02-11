@@ -10,6 +10,7 @@ from src.nutrition_agent.models.diet_plan import (
     Ingredient,
     Macronutrients,
     Meal,
+    MealNotice,
     ShoppingListItem,
 )
 from src.nutrition_agent.models.nutritional_targets import NutritionalTargets
@@ -20,6 +21,7 @@ __all__ = [
     "NutritionalTargets",
     "Ingredient",
     "Meal",
+    "MealNotice",
     "Macronutrients",
     "ShoppingListItem",
     "DietPlan",

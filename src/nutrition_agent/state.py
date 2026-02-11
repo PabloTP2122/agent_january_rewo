@@ -24,6 +24,7 @@ from pydantic import Field
 from src.nutrition_agent.models import (
     DietPlan,
     Meal,
+    MealNotice,
     NutritionalTargets,
     UserProfile,
 )
@@ -78,4 +79,5 @@ class NutritionAgentState(CopilotKitState):
     # Phase 5: Validation
     validation_errors: list[str] = Field(default_factory=list)
     validation_retry_count: int = 0
+    meal_notices: dict[str, MealNotice] = Field(default_factory=dict)
     final_diet_plan: DietPlan | None = None

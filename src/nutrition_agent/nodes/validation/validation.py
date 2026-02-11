@@ -20,6 +20,7 @@ from src.nutrition_agent.models import (
     Ingredient,
     Macronutrients,
     Meal,
+    MealNotice,
     NutritionalTargets,
     ShoppingListItem,
     UserProfile,
@@ -30,6 +31,7 @@ from .tools import consolidate_shopping_list
 
 # Tolerance for calorie validation
 CALORIE_TOLERANCE = 0.05  # ±5%
+WARNING_THRESHOLD = 0.02  # ±2% — below this, no notice
 
 
 def _ingredients_to_raw_strings(
@@ -125,6 +127,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
 
     # 3. Per-meal ingredient kcal sum vs budget from meal_distribution
     failed_meals: list[tuple[str, str]] = []  # (meal_time, feedback_msg)
+    meal_notices: dict[str, MealNotice] = {}
     meal_distribution = state.get("meal_distribution")
     if meal_distribution:
         for meal in daily_meals:
@@ -137,19 +140,37 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
                 continue
             ingredient_kcals_sum = sum(ing.kcal for ing in meal.ingredients)
             meal_error_pct = abs(ingredient_kcals_sum - budget) / budget
+            direction = "por debajo" if ingredient_kcals_sum < budget else "por encima"
+            pct = meal_error_pct * 100
+            notice_msg = (
+                f"{pct:.1f}% {direction} del presupuesto "
+                f"({ingredient_kcals_sum:.1f} vs "
+                f"{budget:.1f} kcal)"
+            )
             if meal_error_pct > CALORIE_TOLERANCE:
-                direction = "below" if ingredient_kcals_sum < budget else "above"
-                pct = meal_error_pct * 100
                 feedback = (
-                    f"ingredient kcal sum {ingredient_kcals_sum:.1f} vs "
+                    f"ingredient kcal sum "
+                    f"{ingredient_kcals_sum:.1f} vs "
                     f"budget {budget:.1f} kcal "
                     f"({pct:.1f}% {direction} target). "
-                    f"Adjust portions to reach {budget:.1f} kcal."
+                    f"Adjust portions to reach "
+                    f"{budget:.1f} kcal."
                 )
                 validation_errors.append(
                     f"Meal '{meal.title}' ({meal.meal_time.value}): {feedback}"
                 )
                 failed_meals.append((meal.meal_time.value, feedback))
+                meal_notices[meal.meal_time.value] = MealNotice(
+                    severity="error",
+                    message=notice_msg,
+                    deviation_pct=round(pct, 1),
+                )
+            elif meal_error_pct >= WARNING_THRESHOLD:
+                meal_notices[meal.meal_time.value] = MealNotice(
+                    severity="warning",
+                    message=notice_msg,
+                    deviation_pct=round(pct, 1),
+                )
 
     # 4. Check meal count matches expected
     expected_meals = user_profile.number_of_meals
@@ -166,6 +187,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
             "validation_errors": validation_errors,
             "final_diet_plan": None,
             "validation_retry_count": retry_count + 1,
+            "meal_notices": meal_notices,
         }
         # Targeted regeneration: exactly 1 meal failed budget check
         if len(failed_meals) == 1:
@@ -219,6 +241,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         "validation_errors": [],
         "final_diet_plan": final_diet_plan,
         "validation_retry_count": 0,
+        "meal_notices": meal_notices,
         "selected_meal_to_change": None,
         "user_feedback": None,
     }

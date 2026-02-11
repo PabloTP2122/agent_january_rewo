@@ -1,6 +1,8 @@
 # File: src/nutrition_agent/models/diet_plan.py
 """Diet plan models for final nutrition output."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from src.shared.enums import MealTime
@@ -69,6 +71,19 @@ class Macronutrients(BaseModel):
         description="Fat in grams",
         examples=[50.0, 66.7, 75.0],
     )
+
+
+class MealNotice(BaseModel):
+    """Per-meal validation notice for HITL display.
+
+    Severity thresholds:
+    - warning: 2-5% off calorie budget (within tolerance but notable)
+    - error: >5% off budget (only reaches HITL when retries exhausted)
+    """
+
+    severity: Literal["warning", "error"]
+    message: str
+    deviation_pct: float = Field(ge=0, le=100)
 
 
 class Ingredient(BaseModel):
