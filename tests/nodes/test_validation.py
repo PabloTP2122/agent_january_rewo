@@ -3,6 +3,8 @@
 Tests the deterministic validation logic (no LLM) including:
 - Global calorie tolerance (±5%)
 - Per-meal ingredient kcal sum vs budget from meal_distribution (±5%)
+- Routing hints (selected_meal_to_change, user_feedback)
+- Validation retry counter
 - Meal count matching
 - Edge cases (no meals, missing targets)
 """
@@ -114,6 +116,9 @@ class TestValidationPassesWithinTolerance:
         assert result["validation_errors"] == []
         assert result["final_diet_plan"] is not None
         assert result["final_diet_plan"].total_calories == 2000.0
+        assert result["validation_retry_count"] == 0
+        assert result["selected_meal_to_change"] is None
+        assert result["user_feedback"] is None
 
     def test_within_tolerance(self) -> None:
         """Each meal ~4% off budget (within 5% threshold)."""
@@ -132,6 +137,7 @@ class TestValidationPassesWithinTolerance:
 
         assert result["validation_errors"] == []
         assert result["final_diet_plan"] is not None
+        assert result["validation_retry_count"] == 0
 
 
 class TestValidationCatchesPerMealBudgetViolation:
@@ -158,6 +164,11 @@ class TestValidationCatchesPerMealBudgetViolation:
         assert "Cena Mala" in errors[0]
         assert "Cena" in errors[0]
         assert "14.0%" in errors[0]
+        # Routing: single meal failed → targeted regeneration
+        assert result["selected_meal_to_change"] == "Cena"
+        assert "budget" in result["user_feedback"]
+        assert "516.0" in result["user_feedback"]
+        assert result["validation_retry_count"] == 1
 
     def test_no_meal_distribution_skips_check(self) -> None:
         """When meal_distribution is None, per-meal budget check is skipped."""
@@ -207,6 +218,9 @@ class TestValidationCatchesIngredientSumMismatch:
         assert "400.0" in ingredient_errors[0]
         assert "budget" in ingredient_errors[0]
         assert "33.3%" in ingredient_errors[0]
+        # Single meal failed → targeted regeneration
+        assert result["selected_meal_to_change"] == "Cena"
+        assert result["validation_retry_count"] == 1
 
 
 class TestValidationNoMeals:
@@ -259,3 +273,83 @@ class TestValidationMealCountMismatch:
         errors = result["validation_errors"]
         count_errors = [e for e in errors if "Expected 3 meals but got 2" in e]
         assert len(count_errors) == 1
+
+
+class TestValidationMultipleMealsFailRoutesToBatch:
+    """When 2+ meals fail budget check → no targeted regen (batch route)."""
+
+    def test_two_meals_off(self) -> None:
+        """Desayuno and Cena both off → selected_meal_to_change is None."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno Mala", 400.0),  # vs 600
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena Mala", 400.0),  # vs 600
+        ]
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={
+                "Desayuno": 600.0,
+                "Comida": 800.0,
+                "Cena": 600.0,
+            },
+        )
+
+        result = validation(state)
+
+        assert result["final_diet_plan"] is None
+        assert len(result["validation_errors"]) >= 2
+        # Multiple failures → no targeted regen
+        assert result["selected_meal_to_change"] is None
+        assert result["user_feedback"] is None
+        assert result["validation_retry_count"] == 1
+
+
+class TestValidationRetryCount:
+    """Retry counter increments on failure and resets on success."""
+
+    def test_retry_count_increments(self) -> None:
+        """Counter goes from 1 → 2 on second failure."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno OK", 600.0),
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena Mala", 400.0),  # 33% off
+        ]
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={
+                "Desayuno": 600.0,
+                "Comida": 800.0,
+                "Cena": 600.0,
+            },
+        )
+        # Simulate second attempt (retry_count already 1)
+        state["validation_retry_count"] = 1
+
+        result = validation(state)
+
+        assert result["final_diet_plan"] is None
+        assert result["validation_retry_count"] == 2
+
+    def test_retry_count_resets_on_success(self) -> None:
+        """Counter resets to 0 when validation passes."""
+        meals = [
+            _make_meal(MealTime.DESAYUNO, "Desayuno OK", 600.0),
+            _make_meal(MealTime.COMIDA, "Comida OK", 800.0),
+            _make_meal(MealTime.CENA, "Cena OK", 600.0),
+        ]
+        state = _base_state(
+            daily_meals=meals,
+            meal_distribution={
+                "Desayuno": 600.0,
+                "Comida": 800.0,
+                "Cena": 600.0,
+            },
+        )
+        # Simulate previous failure
+        state["validation_retry_count"] = 2
+
+        result = validation(state)
+
+        assert result["validation_errors"] == []
+        assert result["final_diet_plan"] is not None
+        assert result["validation_retry_count"] == 0

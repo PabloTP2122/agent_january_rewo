@@ -4,7 +4,8 @@ This node performs deterministic validation (NO LLM) to:
 1. Sum total calories from daily_meals
 2. Verify global total against target (±5% tolerance)
 3. Verify per-meal ingredient kcal sum against budget from meal_distribution (±5%)
-4. Build final DietPlan with consolidated shopping list
+4. Output routing hints for targeted single-meal regeneration
+5. Build final DietPlan with consolidated shopping list
 
 Uses tools: consolidate_shopping_list
 """
@@ -71,6 +72,9 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         dict with:
         - validation_errors: List of error messages (empty if valid)
         - final_diet_plan: DietPlan if valid, None otherwise
+        - validation_retry_count: Incremented on failure, reset to 0 on success
+        - selected_meal_to_change: meal_time if exactly 1 meal failed budget
+        - user_feedback: Feedback string for targeted regeneration
     """
     # Handle LangGraph serialization: Pydantic models become dicts after checkpointing
     daily_meals_data = state.get("daily_meals", [])
@@ -120,6 +124,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
         )
 
     # 3. Per-meal ingredient kcal sum vs budget from meal_distribution
+    failed_meals: list[tuple[str, str]] = []  # (meal_time, feedback_msg)
     meal_distribution = state.get("meal_distribution")
     if meal_distribution:
         for meal in daily_meals:
@@ -133,11 +138,18 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
             ingredient_kcals_sum = sum(ing.kcal for ing in meal.ingredients)
             meal_error_pct = abs(ingredient_kcals_sum - budget) / budget
             if meal_error_pct > CALORIE_TOLERANCE:
-                validation_errors.append(
-                    f"Meal '{meal.title}' ({meal.meal_time.value}): "
-                    f"ingredient kcal sum {ingredient_kcals_sum:.1f} vs budget "
-                    f"{budget:.1f} kcal (error: {meal_error_pct * 100:.1f}%, max: 5%)"
+                direction = "below" if ingredient_kcals_sum < budget else "above"
+                pct = meal_error_pct * 100
+                feedback = (
+                    f"ingredient kcal sum {ingredient_kcals_sum:.1f} vs "
+                    f"budget {budget:.1f} kcal "
+                    f"({pct:.1f}% {direction} target). "
+                    f"Adjust portions to reach {budget:.1f} kcal."
                 )
+                validation_errors.append(
+                    f"Meal '{meal.title}' ({meal.meal_time.value}): {feedback}"
+                )
+                failed_meals.append((meal.meal_time.value, feedback))
 
     # 4. Check meal count matches expected
     expected_meals = user_profile.number_of_meals
@@ -147,12 +159,22 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
             f"Expected {expected_meals} meals but got {actual_meals}"
         )
 
-    # If validation errors, return early
+    # If validation errors, return with routing hints for targeted regeneration
     if validation_errors:
-        return {
+        retry_count = state.get("validation_retry_count", 0)
+        result: dict[str, Any] = {
             "validation_errors": validation_errors,
             "final_diet_plan": None,
+            "validation_retry_count": retry_count + 1,
         }
+        # Targeted regeneration: exactly 1 meal failed budget check
+        if len(failed_meals) == 1:
+            result["selected_meal_to_change"] = failed_meals[0][0]
+            result["user_feedback"] = failed_meals[0][1]
+        else:
+            result["selected_meal_to_change"] = None
+            result["user_feedback"] = None
+        return result
 
     # 5. Consolidate shopping list from all meals
     all_ingredients: list[str] = []
@@ -196,6 +218,9 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
     return {
         "validation_errors": [],
         "final_diet_plan": final_diet_plan,
+        "validation_retry_count": 0,
+        "selected_meal_to_change": None,
+        "user_feedback": None,
     }
 
 

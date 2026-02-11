@@ -47,6 +47,7 @@ class NutritionAgentState(CopilotKitState):
         user_feedback: Optional feedback when user requests meal change
         selected_meal_to_change: MealTime to regenerate (if change_meal)
         validation_errors: Errors found during final validation
+        validation_retry_count: Auto-fix attempts before routing to HITL
         final_diet_plan: The complete validated plan
     """
 
@@ -76,4 +77,5 @@ class NutritionAgentState(CopilotKitState):
 
     # Phase 5: Validation
     validation_errors: list[str] = Field(default_factory=list)
+    validation_retry_count: int = 0
     final_diet_plan: DietPlan | None = None
