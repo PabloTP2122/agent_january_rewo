@@ -21,9 +21,7 @@ def sum_total_kcal(kcals_meals: list[float]) -> str:
         return f"Error: {str(e)}. Verify the list contains only numbers."
 
 
-# ---------------------------------------------------------------------------
 # Ingredient parsing helpers
-# ---------------------------------------------------------------------------
 
 # Known units whitelist — prevents "ml" from being split into "m" + item "l"
 _KNOWN_UNITS = r"(?:gramos|kilogramos|kilos|litros|unidades|unidad|gr|kg|ml|g|l)"
@@ -56,7 +54,7 @@ def _normalize_unit(raw_unit: str, qty: float) -> tuple[float, str]:
     if u == "ml":
         return qty, "ml"
     if u in ("unidad", "unidades"):
-        return qty, "unidad"
+        return qty, "unidad/es"
     return qty, u
 
 
@@ -111,9 +109,14 @@ def _parse_ingredient(raw: str) -> tuple[float, str, str]:
     return 0.0, "varios", _clean_item_name(text).lower()
 
 
-# ---------------------------------------------------------------------------
-# Tool
-# ---------------------------------------------------------------------------
+def _fmt_qty(qty: float, unit: str) -> str:
+    """Format quantity + unit for shopping list output."""
+    num = f"{qty:g}"  # strips trailing zeros: 3.0→"3", 0.5→"0.5"
+    sep = " " if len(unit) > 2 else ""  # "g"/"ml"→"", "unidad"→" "
+    return f"{num}{sep}{unit}"
+
+
+# Tool: consolidate_shopping_list
 
 
 @tool("consolidate_shopping_list", args_schema=ConsolidateInput)  # type: ignore [misc]
@@ -151,7 +154,8 @@ def consolidate_shopping_list(ingredients_raw: list[str]) -> str:
             if unit_clean == "varios":
                 formatted_item = f"- {name_part.title()}"
             else:
-                formatted_item = f"- {name_part.title()}: {total_qty:.0f}{unit_clean}"
+                qty_str = _fmt_qty(total_qty, unit_clean)
+                formatted_item = f"- {name_part.title()}: {qty_str}"
 
             final_list.append(formatted_item)
         except ValueError:

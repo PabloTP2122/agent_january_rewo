@@ -2,18 +2,21 @@
 
 This node performs deterministic validation (NO LLM) to:
 1. Sum total calories from daily_meals
-2. Verify against target (±5% tolerance)
-3. Build final DietPlan with consolidated shopping list
+2. Verify global total against target (±5% tolerance)
+3. Verify per-meal ingredient kcal sum against budget from meal_distribution (±5%)
+4. Build final DietPlan with consolidated shopping list
 
-Uses shared tools: sum_total_kcal, consolidate_shopping_list
+Uses tools: consolidate_shopping_list
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from src.nutrition_agent.models import (
     DietPlan,
+    Ingredient,
     Macronutrients,
     Meal,
     NutritionalTargets,
@@ -26,6 +29,29 @@ from .tools import consolidate_shopping_list
 
 # Tolerance for calorie validation
 CALORIE_TOLERANCE = 0.05  # ±5%
+
+
+def _ingredients_to_raw_strings(
+    ingredients: list[Ingredient],
+) -> list[str]:
+    """Convert structured Ingredients to raw strings for consolidate_shopping_list.
+
+    Uses cantidad_display to preserve the correct unit (g, ml, unidades)
+    instead of hardcoding grams. Strips parenthetical weight context
+    (e.g. "3 unidades (150g)" → "3 unidades") so the consolidation regex
+    matches the first qty+unit cleanly.
+
+    Args:
+        ingredients: List of Ingredient objects
+
+    Returns:
+        List of strings like "200g Espinaca", "200ml Leche", "3 unidades Huevo"
+    """
+    result = []
+    for ing in ingredients:
+        display = re.sub(r"\s*\([^)]*\)", "", ing.cantidad_display).strip()
+        result.append(f"{display} {ing.nombre}")
+    return result
 
 
 def validation(state: NutritionAgentState) -> dict[str, Any]:
@@ -93,7 +119,27 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
             f"({target_calories:.1f}) by {error_pct * 100:.1f}% (max allowed: 5%)"
         )
 
-    # 3. Check meal count matches expected
+    # 3. Per-meal ingredient kcal sum vs budget from meal_distribution
+    meal_distribution = state.get("meal_distribution")
+    if meal_distribution:
+        for meal in daily_meals:
+            budget = meal_distribution.get(meal.meal_time.value)
+            if budget is None:
+                validation_errors.append(
+                    f"Meal '{meal.title}' ({meal.meal_time.value}): "
+                    f"no budget found in meal_distribution"
+                )
+                continue
+            ingredient_kcals_sum = sum(ing.kcal for ing in meal.ingredients)
+            meal_error_pct = abs(ingredient_kcals_sum - budget) / budget
+            if meal_error_pct > CALORIE_TOLERANCE:
+                validation_errors.append(
+                    f"Meal '{meal.title}' ({meal.meal_time.value}): "
+                    f"ingredient kcal sum {ingredient_kcals_sum:.1f} vs budget "
+                    f"{budget:.1f} kcal (error: {meal_error_pct * 100:.1f}%, max: 5%)"
+                )
+
+    # 4. Check meal count matches expected
     expected_meals = user_profile.number_of_meals
     actual_meals = len(daily_meals)
     if actual_meals != expected_meals:
@@ -108,10 +154,10 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
             "final_diet_plan": None,
         }
 
-    # 4. Consolidate shopping list from all meals
+    # 5. Consolidate shopping list from all meals
     all_ingredients: list[str] = []
     for meal in daily_meals:
-        all_ingredients.extend(meal.ingredients)
+        all_ingredients.extend(_ingredients_to_raw_strings(meal.ingredients))
 
     shopping_list_raw = consolidate_shopping_list.invoke(
         {"ingredients_raw": all_ingredients}
@@ -120,7 +166,7 @@ def validation(state: NutritionAgentState) -> dict[str, Any]:
     # Parse shopping list result (tool returns string with consolidated items)
     shopping_list = _parse_shopping_list(shopping_list_raw)
 
-    # 5. Build final DietPlan
+    # 6. Build final DietPlan
     diet_type_label = (
         "Cetogénica"
         if user_profile.diet_type.value == "keto"

@@ -3,9 +3,7 @@ consolidate_shopping_list tool."""
 
 from src.nutrition_agent.nodes.validation.tools import consolidate_shopping_list
 
-# =============================================================================
-# consolidate_shopping_list tests — existing
-# =============================================================================
+# consolidate_shopping_list tests
 
 
 def test_consolidate_shopping_list_basic() -> None:
@@ -59,9 +57,7 @@ def test_consolidate_shopping_list_no_quantity() -> None:
     assert "arroz" in result.lower()
 
 
-# =============================================================================
-# New tests — real-world formats
-# =============================================================================
+# tests — real-world formats (based on langsmith outputs)
 
 
 def test_consolidate_real_llm_output() -> None:
@@ -162,7 +158,18 @@ def test_fraction_quantity() -> None:
 
     lower = result.lower()
     assert "lim" in lower  # limón / limon
-    # Fraction should not cause a crash; item should appear
+    assert "0.5" in result  # was rounding to 0
+    assert "unidad" in lower
+
+
+def test_fraction_consolidation() -> None:
+    """Test: '1/2 unidad' + '1/2 unidad' = '1 unidad'."""
+    result = consolidate_shopping_list.invoke(
+        {"ingredients_raw": ["Limón 1/2 unidad", "Limón 1/2 unidad"]}
+    )
+    lower = result.lower()
+    assert "lim" in lower
+    assert "1 unidad" in lower  # 0.5 + 0.5 = 1.0 → "1 unidad"
 
 
 def test_mixed_format_duplicates() -> None:
@@ -202,3 +209,74 @@ def test_output_uses_colon_format() -> None:
     # Format: "- Pollo: 200g"
     assert "pollo" in result.lower()
     assert "200g" in result
+
+
+# Adapter output format tests — covers _ingredients_to_raw_strings() output
+
+
+def test_unidades_qty_first() -> None:
+    """Test: '3 unidades Huevo entero' — adapter output for countable items."""
+    result = consolidate_shopping_list.invoke(
+        {"ingredients_raw": ["3 unidades Huevo entero"]}
+    )
+    lower = result.lower()
+    assert "huevo entero" in lower
+    assert "3" in result
+    assert "unidad" in lower
+
+
+def test_unidades_consolidation_across_meals() -> None:
+    """Test: unidades from different meals are summed."""
+    result = consolidate_shopping_list.invoke(
+        {
+            "ingredients_raw": [
+                "2 unidades Huevo entero",
+                "3 unidades Huevo entero",
+            ]
+        }
+    )
+    lower = result.lower()
+    assert "huevo entero" in lower
+    assert "5" in result
+    assert "unidad" in lower
+
+
+def test_ml_qty_first() -> None:
+    """Test: '200ml Leche de almendra' — adapter output for liquids."""
+    result = consolidate_shopping_list.invoke(
+        {"ingredients_raw": ["200ml Leche de almendra", "15ml Aceite de oliva"]}
+    )
+    lower = result.lower()
+    assert "leche de almendra" in lower
+    assert "200" in result
+    assert "ml" in lower
+    assert "aceite de oliva" in lower
+
+
+def test_mixed_units_same_plan() -> None:
+    """Realistic full-plan input: mix of g, ml, unidades from adapter."""
+    result = consolidate_shopping_list.invoke(
+        {
+            "ingredients_raw": [
+                "200g Pechuga de pollo",
+                "100g Espinaca",
+                "2 unidades Huevo entero",
+                "200ml Leche de almendra",
+                "10ml Aceite de oliva",
+                "150g Pechuga de pollo",  # duplicate — should consolidate
+                "5ml Aceite de oliva",  # duplicate — should consolidate
+            ]
+        }
+    )
+    lower = result.lower()
+    # Pollo: 200+150 = 350g
+    assert "pechuga de pollo" in lower
+    assert "350" in result
+    # Aceite: 10+5 = 15ml
+    assert "aceite de oliva" in lower
+    assert "15ml" in result
+    # Huevo: 2 unidades
+    assert "huevo entero" in lower
+    assert "unidad" in lower
+    # Leche: 200ml
+    assert "leche de almendra" in lower
