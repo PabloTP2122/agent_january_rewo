@@ -3,10 +3,8 @@ from pydantic import ValidationError
 
 from src.nutrition_agent.nodes.calculation.tools import generate_nutritional_plan
 
-# =============================================================================
 # generate_nutritional_plan tests
 #    (already covered in test_generate_nutritional_plan.py - complementary)
-# =============================================================================
 
 
 def test_generate_nutritional_plan_maintenance() -> None:
