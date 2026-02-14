@@ -22,6 +22,7 @@ dependencies = [
     "langchain-pinecone>=0.2.13",
     "ag-ui-langgraph>=0.0.21",
     "uvicorn>=0.40.0",
+    "gunicorn>=23.0.0",
 ]
 
 [dependency-groups]
@@ -54,6 +55,8 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 # Ignore S101 (assert usage) and E402 (import order) in test files
 "tests/**/*.py" = ["S101", "E402"]
+# Prompt string literals: line breaks change LLM meaning, don't enforce line length
+"src/**/prompts/*.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.13"
