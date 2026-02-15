@@ -9,14 +9,14 @@ _base_config = SettingsConfigDict(
 
 
 class DatabaseSettings(BaseSettings):
-    POSTGRES_SERVER: str = ""
-    POSTGRES_USER: str = ""
-    POSTGRES_PORT: int = 5432
-    POSTGRES_PASSWORD: str = ""
-    POSTGRES_DB: str = ""
+    POSTGRES_SERVER: str
+    POSTGRES_USER: str
+    POSTGRES_PORT: int
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
 
     # Run mode: "memory" (default) or "postgres" (production)
-    CHECKPOINTER_TYPE: str = "memory"
+    CHECKPOINTER_TYPE: str
 
     # Comma-separated CORS origins
     ALLOWED_ORIGINS: str = "http://localhost:3000"

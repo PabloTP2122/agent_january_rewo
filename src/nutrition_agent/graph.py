@@ -34,10 +34,9 @@ Graph Flow:
        END
 """
 
-import os
-
-from dotenv import load_dotenv
+from ag_ui_langgraph.agent import CompiledStateGraph
 from langgraph.graph import END, StateGraph
+from langgraph.types import Checkpointer
 
 from src.nutrition_agent.nodes import (
     calculation,
@@ -48,8 +47,6 @@ from src.nutrition_agent.nodes import (
     validation,
 )
 from src.nutrition_agent.state import NutritionAgentState
-
-load_dotenv()
 
 
 def route_after_data_collection(state: NutritionAgentState) -> str:
@@ -152,14 +149,11 @@ builder.add_conditional_edges(
     },
 )
 
-# Conditionally use a checkpointer based on the environment
-# Check for multiple indicators that we're running in LangGraph dev/API mode
-is_fast_api = os.environ.get("LANGGRAPH_FAST_API", "false").lower() == "true"
-# Compile the graph
-if is_fast_api:
-    # For CopilotKit and other contexts, use MemorySaver
-    from langgraph.checkpoint.memory import MemorySaver
 
-    graph = builder.compile(checkpointer=MemorySaver())
-else:
-    graph = builder.compile()
+def make_graph(checkpointer: Checkpointer = None) -> CompiledStateGraph:
+    """Compile the nutrition agent graph with an optional checkpointer."""
+    return builder.compile(checkpointer=checkpointer)
+
+
+# Default for langgraph dev / CLI (mode 1: no checkpointer needed)
+graph = make_graph()

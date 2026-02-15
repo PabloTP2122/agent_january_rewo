@@ -2,31 +2,34 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from .config import db_settings
 
 DB_URI = db_settings.POSTGRES_URL
 
-# Global checkpointer instance
-_checkpointer: PostgresSaver | None = None
+_checkpointer: AsyncPostgresSaver | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
+async def db_lifespan(app: FastAPI) -> Any:
+    """Manage AsyncPostgresSaver lifecycle using from_conn_string."""
     global _checkpointer
-    with PostgresSaver.from_conn_string(DB_URI) as checkpointer:
+    async with AsyncPostgresSaver.from_conn_string(DB_URI) as checkpointer:
+        await checkpointer.setup()
         _checkpointer = checkpointer
-        _checkpointer.setup()
-        yield
+        try:
+            yield
+        finally:
+            _checkpointer = None
 
 
-def get_checkpointer() -> PostgresSaver:
+def get_checkpointer() -> AsyncPostgresSaver:
     if _checkpointer is None:
         raise RuntimeError(
-            "Checkpointer not initialized. Make sure lifespan is running."
+            "Checkpointer not initialized. Make sure db_lifespan is running."
         )
     return _checkpointer
 
 
-CheckpointerDep = Annotated[PostgresSaver, Depends(get_checkpointer)]
+CheckpointerDep = Annotated[AsyncPostgresSaver, Depends(get_checkpointer)]
