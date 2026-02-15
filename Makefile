@@ -16,10 +16,14 @@ docker-show:
 
 server-run-d:
 	docker compose up -d
-	uv run fastapi dev src/api/main.py
+	CHECKPOINTER_TYPE=postgres uv run fastapi dev src/api/main.py --port 8123
 
 server-run:
-	uv run fastapi dev src/api/main.py
+	uv run fastapi dev src/api/main.py --port 8123
+
+server-prod:
+	docker compose up -d
+	CHECKPOINTER_TYPE=postgres uv run fastapi dev src/api/main.py --port 8123
 
 lang-dev:
 	uv run langgraph dev
